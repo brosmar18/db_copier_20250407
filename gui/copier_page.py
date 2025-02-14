@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
-from db.database import fetch_databases, copy_database_logic
+from db import fetch_databases, copy_database_logic
+
 
 class CopierPage(ttk.Frame):
     def __init__(self, parent, controller):

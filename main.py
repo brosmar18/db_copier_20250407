@@ -1,8 +1,9 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from gui.login_page import LoginPage
 from gui.copier_page import CopierPage
 from gui.db_management_page import DBManagementPage
+from gui.restore_page import RestorePage
 
 class App(tk.Tk):
     def __init__(self):
@@ -10,20 +11,18 @@ class App(tk.Tk):
         self.title("PostgreSQL Database Manager")
         self.geometry("800x600")
         
-        # Setup custom styles
+        # Setup custom styles.
         self.setup_styles()
         
-        # Create Navigation Bar (initially hidden)
+        # Create Navigation Bar (initially hidden on login)
         self.nav_bar = ttk.Frame(self, style="Nav.TFrame")
         self.build_nav_bar()
         self.nav_bar.grid(row=0, column=0, sticky="ew")
-        self.nav_bar.grid_remove()  # hide nav bar initially (login page)
+        self.nav_bar.grid_remove()  # Hide nav bar on login page
         
         # Container for pages (below the nav bar)
         self.container = ttk.Frame(self)
         self.container.grid(row=1, column=0, sticky="nsew")
-        
-        # Configure the grid of the main window and container so that pages expand properly.
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.container.grid_rowconfigure(0, weight=1)
@@ -31,64 +30,64 @@ class App(tk.Tk):
         
         # Dictionary to hold pages
         self.frames = {}
-        
-        # Shared state (e.g. credentials)
-        self.db_credentials = {}
-        
-        # Initialize pages
-        for Page in (LoginPage, CopierPage, DBManagementPage):
+        for Page in (LoginPage, CopierPage, DBManagementPage, RestorePage):
             page_name = Page.__name__
             frame = Page(parent=self.container, controller=self)
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
         
+        # Shared state (e.g., credentials)
+        self.db_credentials = {}
+        
+        # Show the login page initially.
         self.show_frame("LoginPage")
     
     def setup_styles(self):
         style = ttk.Style()
-        style.theme_use('clam')  # Use a theme that is easily customizable
+        style.theme_use("clam")
         
-        # Global widget styles
+        # Global widget styles.
         style.configure("TFrame", background="white")
         style.configure("TLabel", background="white", font=("Helvetica", 12))
         style.configure("TButton", font=("Helvetica", 10), padding=5)
         style.configure("TEntry", font=("Helvetica", 10), padding=5)
         
-        # Navigation bar styles
+        # Navigation bar styles.
         style.configure("Nav.TFrame", background="#181F67")
         style.configure("Nav.TLabel", background="#181F67", foreground="white", font=("Helvetica", 14, "bold"))
         style.configure("Nav.TButton", background="#7BB837", foreground="white", font=("Helvetica", 10, "bold"), padding=5)
         style.map("Nav.TButton", background=[("active", "#6AA62F")])
         
-        # Logout button (distinct style)
+        # Logout button style.
         style.configure("Logout.TButton", background="#939498", foreground="white", font=("Helvetica", 10, "bold"), padding=5)
         style.map("Logout.TButton", background=[("active", "#7A7A7A")])
     
     def build_nav_bar(self):
-        # Clear previous widgets if any
+        # Clear existing nav bar widgets.
         for widget in self.nav_bar.winfo_children():
             widget.destroy()
         
-        # Title label on the nav bar
+        # Nav bar title.
         title_label = ttk.Label(self.nav_bar, text="PostgreSQL DB Manager", style="Nav.TLabel")
         title_label.pack(side="left", padx=20, pady=10)
         
-        # Navigation buttons container
+        # Navigation buttons.
         btn_frame = ttk.Frame(self.nav_bar, style="Nav.TFrame")
         btn_frame.pack(side="right", padx=20)
         
-        # Navigation page buttons
         copier_btn = ttk.Button(btn_frame, text="Copier", style="Nav.TButton",
                                   command=lambda: self.show_frame("CopierPage"))
         copier_btn.pack(side="left", padx=5)
         
         db_mgmt_btn = ttk.Button(btn_frame, text="DB Management", style="Nav.TButton",
-                                 command=lambda: self.show_frame("DBManagementPage"))
+                                   command=lambda: self.show_frame("DBManagementPage"))
         db_mgmt_btn.pack(side="left", padx=5)
         
-        # Distinct logout button
-        logout_btn = ttk.Button(btn_frame, text="Logout", style="Logout.TButton",
-                                command=self.logout)
+        restore_btn = ttk.Button(btn_frame, text="Restore", style="Nav.TButton",
+                                  command=lambda: self.show_frame("RestorePage"))
+        restore_btn.pack(side="left", padx=5)
+        
+        logout_btn = ttk.Button(btn_frame, text="Logout", style="Logout.TButton", command=self.logout)
         logout_btn.pack(side="left", padx=5)
     
     def show_frame(self, page_name):
@@ -96,8 +95,7 @@ class App(tk.Tk):
         frame = self.frames[page_name]
         frame.tkraise()
         frame.event_generate("<<ShowFrame>>")
-        
-        # Only show the nav bar when NOT on the login page
+        # Show the nav bar for all pages except the login page.
         if page_name == "LoginPage":
             self.nav_bar.grid_remove()
         else:
