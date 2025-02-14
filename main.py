@@ -16,16 +16,23 @@ class App(tk.Tk):
         # Create Navigation Bar (initially hidden)
         self.nav_bar = ttk.Frame(self, style="Nav.TFrame")
         self.build_nav_bar()
-        self.nav_bar.pack_forget()
+        self.nav_bar.grid(row=0, column=0, sticky="ew")
+        self.nav_bar.grid_remove()  # hide nav bar initially (login page)
         
         # Container for pages (below the nav bar)
         self.container = ttk.Frame(self)
-        self.container.pack(fill="both", expand=True)
+        self.container.grid(row=1, column=0, sticky="nsew")
         
-        # Dictionary to hold our pages
+        # Configure the grid of the main window and container so that pages expand properly.
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+        
+        # Dictionary to hold pages
         self.frames = {}
         
-        # Shared state (e.g. credentials) goes here
+        # Shared state (e.g. credentials)
         self.db_credentials = {}
         
         # Initialize pages
@@ -39,7 +46,7 @@ class App(tk.Tk):
     
     def setup_styles(self):
         style = ttk.Style()
-        style.theme_use('clam')  # using 'clam' to allow easier customization
+        style.theme_use('clam')  # Use a theme that is easily customizable
         
         # Global widget styles
         style.configure("TFrame", background="white")
@@ -58,7 +65,7 @@ class App(tk.Tk):
         style.map("Logout.TButton", background=[("active", "#7A7A7A")])
     
     def build_nav_bar(self):
-        # Clear any previous nav bar widgets
+        # Clear previous widgets if any
         for widget in self.nav_bar.winfo_children():
             widget.destroy()
         
@@ -70,7 +77,7 @@ class App(tk.Tk):
         btn_frame = ttk.Frame(self.nav_bar, style="Nav.TFrame")
         btn_frame.pack(side="right", padx=20)
         
-        # Page navigation buttons
+        # Navigation page buttons
         copier_btn = ttk.Button(btn_frame, text="Copier", style="Nav.TButton",
                                   command=lambda: self.show_frame("CopierPage"))
         copier_btn.pack(side="left", padx=5)
@@ -90,11 +97,11 @@ class App(tk.Tk):
         frame.tkraise()
         frame.event_generate("<<ShowFrame>>")
         
-        # Show nav bar for all pages except the login page
+        # Only show the nav bar when NOT on the login page
         if page_name == "LoginPage":
-            self.nav_bar.pack_forget()
+            self.nav_bar.grid_remove()
         else:
-            self.nav_bar.pack(fill="x", side="top")
+            self.nav_bar.grid()
     
     def logout(self):
         """Clear credentials and return to the login page."""
