@@ -77,9 +77,11 @@ class RestorePage(ttk.Frame):
         self.progress_bar.grid_remove()
         self.progress_bar['value'] = 0
         self.snake_game.pause_game()  # Pause the snake game
-        final_score = self.snake_game.score
-        commentary = self.snake_game.generate_commentary(final_score)
-        message = f"Database restored successfully!\nYour top snake score: {final_score}\n{commentary}"
+
+        top_score = self.snake_game.high_score  # Get the high score
+        commentary = self.snake_game.generate_commentary(top_score)
+    
+        message = f"Database restored successfully!\nYour top snake score: {top_score}\n{commentary}"
         messagebox.showinfo("Success", message)
 
     def restore_database_action(self):
