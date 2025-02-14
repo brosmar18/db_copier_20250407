@@ -2,11 +2,20 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 from db import create_database, restore_database, terminate_and_delete_database
+from gui.snake_game import SnakeGame
 
 class RestorePage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        self.restore_thread = None
+
+        # Set custom style for progress bar.
+        style = ttk.Style(self)
+        style.configure("Custom.Horizontal.TProgressbar",
+                        troughcolor="#E0E0E0",
+                        background="#7BB837",
+                        thickness=20)
 
         outer_frame = ttk.Frame(self)
         outer_frame.pack(expand=True, fill="both")
@@ -34,23 +43,44 @@ class RestorePage(ttk.Frame):
         restore_btn = ttk.Button(content_frame, text="Restore Database", command=self.restore_database_action)
         restore_btn.grid(row=3, column=0, columnspan=3, pady=10)
 
-        # Progress bar (hidden initially)
-        self.progress = ttk.Progressbar(content_frame, mode="indeterminate", length=300)
-        self.progress.grid(row=4, column=0, columnspan=3, pady=5)
-        self.progress.grid_remove()
+        # Progress bar.
+        self.progress_bar = ttk.Progressbar(content_frame, mode="determinate", maximum=100,
+                                            style="Custom.Horizontal.TProgressbar")
+        self.progress_bar.grid(row=4, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.progress_bar.grid_remove()
+
+        # Embed the Snake game.
+        self.snake_game = SnakeGame(content_frame, width=300, height=200)
+        self.snake_game.grid(row=5, column=0, columnspan=3, padx=10, pady=10)
+        self.snake_game.grid_remove()  # Hidden initially
 
         # Back button.
         back_btn = ttk.Button(content_frame, text="Back", command=lambda: controller.show_frame("DBManagementPage"))
-        back_btn.grid(row=5, column=0, columnspan=3, pady=5)
+        back_btn.grid(row=6, column=0, columnspan=3, pady=5)
 
     def browse_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Backup Files", "*.backup"), ("All Files", "*.*")])
         if file_path:
             self.backup_file_var.set(file_path)
 
-    def reset_progress(self):
-        self.progress.stop()
-        self.progress.grid_remove()
+    def update_progress(self):
+        if self.restore_thread and self.restore_thread.is_alive():
+            current_value = self.progress_bar['value']
+            if current_value < 95:
+                self.progress_bar['value'] += 5
+            self.after(500, self.update_progress)
+        else:
+            self.progress_bar['value'] = 100
+            self.after(500, self.finish_progress)
+
+    def finish_progress(self):
+        self.progress_bar.grid_remove()
+        self.progress_bar['value'] = 0
+        self.snake_game.pause_game()  # Pause the snake game
+        final_score = self.snake_game.score
+        commentary = self.snake_game.generate_commentary(final_score)
+        message = f"Database restored successfully!\nYour top snake score: {final_score}\n{commentary}"
+        messagebox.showinfo("Success", message)
 
     def restore_database_action(self):
         db_name = self.db_name_var.get().strip()
@@ -62,34 +92,27 @@ class RestorePage(ttk.Frame):
             messagebox.showerror("Input Error", "Please select a backup file.")
             return
 
-        confirm = messagebox.askokcancel(
-            "Confirm Restore",
-            f"Are you sure you want to create a new database '{db_name}' and restore from:\n{backup_file}?"
-        )
-        if not confirm:
-            return
-
-        # Show and start the progress bar.
-        self.progress.grid()
-        self.progress.start(10)
-
+        # Start progress bar and show snake game widget.
+        self.progress_bar['value'] = 0
+        self.progress_bar.grid()
+        self.snake_game.grid()  # Ensure game widget is visible
+        # The snake game includes its own "Start Game" button overlay.
+        
         def run_restore():
             credentials = self.controller.db_credentials
             try:
-                # Create new database.
                 create_database(credentials, db_name)
-                # Restore from backup.
                 restore_database(credentials, db_name, backup_file)
-                self.controller.after(0, lambda: messagebox.showinfo("Success", f"Database '{db_name}' restored successfully."))
             except Exception as e:
                 err = str(e)
-                # If restore fails, drop the created database.
                 try:
                     terminate_and_delete_database(credentials, db_name)
-                except Exception as drop_err:
+                except Exception:
                     pass
                 self.controller.after(0, lambda err=err: messagebox.showerror("Error", f"Restore failed: {err}"))
             finally:
-                self.controller.after(0, self.reset_progress)
+                pass
 
-        threading.Thread(target=run_restore, daemon=True).start()
+        self.restore_thread = threading.Thread(target=run_restore, daemon=True)
+        self.restore_thread.start()
+        self.after(500, self.update_progress)

@@ -11,6 +11,7 @@ class DBManagementPage(ttk.Frame):
         self.current_db = None  # Currently selected database name
         self.in_columns_view = False  # Flag to indicate if we're showing columns
         self.all_databases = []  # Full list of databases
+        self.db_selection = {}   # Mapping of database name -> boolean (selected)
         self.all_items = []      # Full list of tables (or columns)
 
         # Set up custom styles using your color theme.
@@ -29,7 +30,6 @@ class DBManagementPage(ttk.Frame):
                         font=("Helvetica", 8, "bold"),
                         padding=(2, 2))
         style.map("Custom.Small.TButton", background=[("active", "#6AA62F")])
-        # New style for delete button.
         style.configure("Delete.TButton",
                         background="#D9534F",
                         foreground="white",
@@ -53,7 +53,7 @@ class DBManagementPage(ttk.Frame):
         content_frame.rowconfigure(0, weight=1)
 
         # === LEFT PANE ===
-        # Header with label, Refresh, and Delete Selected buttons.
+        # Header with label, Refresh, and Delete buttons.
         left_header = ttk.Frame(left_frame)
         left_header.pack(fill="x")
         lbl_left = ttk.Label(left_header, text="Databases", font=("Helvetica", 14, "bold"), foreground="#181F67")
@@ -72,12 +72,17 @@ class DBManagementPage(ttk.Frame):
         self.db_search_entry.pack(side="left", fill="x", expand=True, padx=5)
         self.db_search_entry.bind("<KeyRelease>", self.filter_databases)
 
-        # Treeview for database list (allowing multiple selection).
-        self.db_tree = ttk.Treeview(left_frame, columns=("Database",), show="headings", style="Custom.Treeview", selectmode="extended")
+        # Treeview for database list with checkboxes.
+        # Two columns: "Select" for the checkbox, "Database" for the name.
+        self.db_tree = ttk.Treeview(left_frame, columns=("Select", "Database"), show="headings",
+                                    style="Custom.Treeview", selectmode="none")
+        self.db_tree.heading("Select", text="")  # Checkbox column header is empty.
+        self.db_tree.column("Select", width=30, anchor="center")
         self.db_tree.heading("Database", text="Database Name")
         self.db_tree.column("Database", anchor="w", width=200)
         self.db_tree.pack(expand=True, fill="both", pady=5)
-        self.db_tree.bind("<<TreeviewSelect>>", self.on_db_select)
+        # Bind click events to toggle checkboxes.
+        self.db_tree.bind("<Button-1>", self.on_db_click)
 
         # === RIGHT PANE ===
         # Top: Details section.
@@ -126,8 +131,10 @@ class DBManagementPage(ttk.Frame):
             return
         dbs = fetch_databases(credentials)
         self.all_databases = sorted(dbs)
+        self.db_selection = {}
         for db in self.all_databases:
-            self.db_tree.insert("", tk.END, values=(db,))
+            self.db_selection[db] = False
+            self.db_tree.insert("", tk.END, values=("☐", db))
         self.db_search_var.set("")
         self.clear_details()
         self.in_columns_view = False
@@ -150,20 +157,35 @@ class DBManagementPage(ttk.Frame):
         filtered = [db for db in self.all_databases if term in db.lower()]
         self.db_tree.delete(*self.db_tree.get_children())
         for db in filtered:
-            self.db_tree.insert("", tk.END, values=(db,))
+            selected = self.db_selection.get(db, False)
+            check = "☑" if selected else "☐"
+            self.db_tree.insert("", tk.END, values=(check, db))
+
+    def on_db_click(self, event):
+        """Toggle checkbox if the first column is clicked."""
+        region = self.db_tree.identify("region", event.x, event.y)
+        if region == "cell":
+            col = self.db_tree.identify_column(event.x)
+            if col == "#1":  # first column (checkbox column)
+                row = self.db_tree.identify_row(event.y)
+                if row:
+                    item = self.db_tree.item(row)
+                    db_name = item["values"][1]
+                    self.db_selection[db_name] = not self.db_selection[db_name]
+                    check = "☑" if self.db_selection[db_name] else "☐"
+                    self.db_tree.set(row, column="Select", value=check)
+        # Also update details display if a row is clicked.
+        self.on_db_select(event)
 
     def on_db_select(self, event):
         """When a database is selected, update details and show its tables."""
         selected = self.db_tree.selection()
         if not selected:
             return
-        # For multiple selections, use the first one for details.
         item = self.db_tree.item(selected[0])
-        db_name = item['values'][0]
+        db_name = item['values'][1]
         self.current_db = db_name
         credentials = self.controller.db_credentials
-
-        # Display database details.
         details = get_database_details(credentials, db_name)
         details_str = ""
         if details:
@@ -175,8 +197,6 @@ class DBManagementPage(ttk.Frame):
         self.details_text.delete("1.0", tk.END)
         self.details_text.insert(tk.END, details_str)
         self.details_text.config(state="disabled")
-
-        # Display list of tables.
         tables = get_tables_for_database(credentials, db_name)
         tables = sorted(tables)
         self.all_items = tables
@@ -254,7 +274,6 @@ class DBManagementPage(ttk.Frame):
         self.back_button.grid_remove()
         self.in_columns_view = False
         self.item_search_var.set("")
-        # Optionally, reset details to database details.
         details = get_database_details(credentials, self.current_db)
         details_str = ""
         if details:
@@ -269,29 +288,25 @@ class DBManagementPage(ttk.Frame):
 
     def delete_selected_databases(self):
         """Terminate sessions and delete the selected databases after confirmation."""
-        selected = self.db_tree.selection()
-        if not selected:
+        selected_dbs = [db for db, sel in self.db_selection.items() if sel]
+        if not selected_dbs:
             messagebox.showwarning("No Selection", "No database selected for deletion.")
             return
-        
-        db_names = [self.db_tree.item(item)['values'][0] for item in selected]
         confirm = messagebox.askokcancel(
             "Confirm Deletion",
             f"WARNING: This will permanently delete the following database(s):\n\n" +
-            "\n".join(db_names) +
+            "\n".join(selected_dbs) +
             "\n\nThis action cannot be undone.\nDo you want to proceed?"
         )
         if not confirm:
             return
-        
         def delete_databases():
             credentials = self.controller.db_credentials
-            for db_name in db_names:
+            for db_name in selected_dbs:
                 try:
                     terminate_and_delete_database(credentials, db_name)
                 except Exception as e:
                     messagebox.showerror("Error", f"Error deleting database {db_name}: {e}")
             self.load_databases()
             messagebox.showinfo("Deletion Complete", "Selected database(s) have been deleted.")
-        
         threading.Thread(target=delete_databases, daemon=True).start()
