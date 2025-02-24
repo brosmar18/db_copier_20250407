@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+*.venv
+
+# PyInstaller build files
+build/
+dist/
+*.spec
+
+# Log files
+*.log
+*.txt
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Ignore database backups or test files (if any)
+*.sqlite3
+*.db
+*.bak
+*.tmp
+
+# Ignore Inno Setup installer files (if you create an installer)
+*.iss
+*.exe
