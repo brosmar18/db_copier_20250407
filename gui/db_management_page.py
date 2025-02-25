@@ -15,9 +15,8 @@ class DBManagementPage(ttk.Frame):
         super().__init__(parent)
         self.controller = controller
         self.current_db = None         # Currently selected database name
-        self.in_columns_view = False   # Flag indicating if columns are being shown
         self.all_databases = []        # List of all databases
-        self.all_items = []            # List of tables (or columns)
+        self.all_items = []            # List of tables (or columns) for the left pane
 
         # Set up custom styles using your color theme.
         style = ttk.Style(self)
@@ -48,7 +47,7 @@ class DBManagementPage(ttk.Frame):
         content_frame = ttk.Frame(outer_frame)
         content_frame.pack(expand=True, fill="both")
 
-        # Two main panes: left for databases, right for details and tables/columns.
+        # Two main panes: left for databases, right for details and tables/fields.
         left_frame = ttk.Frame(content_frame)
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
         right_frame = ttk.Frame(content_frame)
@@ -57,8 +56,7 @@ class DBManagementPage(ttk.Frame):
         content_frame.columnconfigure(1, weight=2)
         content_frame.rowconfigure(0, weight=1)
 
-        # === LEFT PANE ===
-        # Header with label, Refresh, and Delete buttons.
+        # === LEFT PANE: DATABASES ===
         left_header = ttk.Frame(left_frame)
         left_header.pack(fill="x")
         lbl_left = ttk.Label(left_header, text="Databases", font=("Helvetica", 14, "bold"), foreground="#181F67")
@@ -68,7 +66,6 @@ class DBManagementPage(ttk.Frame):
         delete_btn = ttk.Button(left_header, text="Delete", command=self.delete_selected_database, style="Delete.TButton")
         delete_btn.pack(side="right", anchor="e", padx=5, pady=2)
 
-        # Search field for databases.
         self.db_search_var = tk.StringVar()
         db_search_frame = ttk.Frame(left_frame)
         db_search_frame.pack(fill="x", padx=2, pady=(2, 5))
@@ -77,22 +74,23 @@ class DBManagementPage(ttk.Frame):
         self.db_search_entry.pack(side="left", fill="x", expand=True, padx=5)
         self.db_search_entry.bind("<KeyRelease>", self.filter_databases)
 
-        # Treeview for database list (without checkboxes).
         self.db_tree = ttk.Treeview(left_frame, columns=("Database",), show="headings", selectmode="browse")
         self.db_tree.heading("Database", text="Database Name")
         self.db_tree.column("Database", anchor="w", width=200)
         self.db_tree.pack(expand=True, fill="both", pady=5)
         self.db_tree.bind("<<TreeviewSelect>>", self.on_db_select)
 
-        # === RIGHT PANE ===
-        # Details section.
+        # === RIGHT PANE: DETAILS & TABLES/FIELDS ===
+        # Upper part: Details text area.
         self.details_label = ttk.Label(right_frame, text="Details", font=("Helvetica", 14, "bold"), foreground="#181F67")
         self.details_label.grid(row=0, column=0, sticky="w")
         self.details_text = tk.Text(right_frame, wrap="word", font=("Helvetica", 10), height=6)
         self.details_text.grid(row=1, column=0, sticky="nsew", pady=(5, 5))
         self.details_text.config(state="disabled")
+        right_frame.rowconfigure(1, weight=0)
 
-        # Search field for tables/columns.
+        # Lower part: Search field and a frame that holds two side-by-side treeviews:
+        # Left: List of tables; Right: List of fields for the selected table.
         self.item_search_var = tk.StringVar()
         item_search_frame = ttk.Frame(right_frame)
         item_search_frame.grid(row=2, column=0, sticky="ew", padx=2, pady=(2, 5))
@@ -101,24 +99,35 @@ class DBManagementPage(ttk.Frame):
         self.item_search_entry.pack(side="left", fill="x", expand=True, padx=5)
         self.item_search_entry.bind("<KeyRelease>", self.filter_items)
 
-        # Header for tables/columns section with a Back button.
+        # Header row for the tables/fields section.
         header_frame_right = ttk.Frame(right_frame)
         header_frame_right.grid(row=3, column=0, sticky="ew")
         self.right_label = ttk.Label(header_frame_right, text="Tables", font=("Helvetica", 14, "bold"), foreground="#181F67")
         self.right_label.pack(side="left", anchor="w")
-        self.back_button = ttk.Button(header_frame_right, text="Back", command=self.back_to_tables, style="Custom.Small.TButton")
+        self.back_button = ttk.Button(header_frame_right, text="Refresh", command=self.back_to_tables, style="Custom.Small.TButton")
         self.back_button.pack(side="right", anchor="e")
-        self.back_button.grid_remove()  # Hide initially
+        self.back_button.grid_remove()  # Initially hidden
 
-        # Treeview for tables/columns.
-        self.item_tree = ttk.Treeview(right_frame, columns=("Item",), show="headings", style="Custom.Treeview")
-        self.item_tree.heading("Item", text="Table Name")
-        self.item_tree.column("Item", anchor="w", width=200)
-        self.item_tree.grid(row=4, column=0, sticky="nsew", pady=(5, 0))
-        self.item_tree.bind("<<TreeviewSelect>>", self.on_item_select)
-        self.item_tree.bind("<Double-1>", self.on_item_double_click)
+        # Bottom frame: will hold two treeviews side by side.
+        self.bottom_frame = ttk.Frame(right_frame)
+        self.bottom_frame.grid(row=4, column=0, sticky="nsew", pady=(5, 0))
         right_frame.rowconfigure(4, weight=1)
         right_frame.columnconfigure(0, weight=1)
+        self.bottom_frame.columnconfigure(0, weight=1)
+        self.bottom_frame.columnconfigure(1, weight=1)
+
+        # Left treeview: List of tables.
+        self.item_tree = ttk.Treeview(self.bottom_frame, columns=("Item",), show="headings", style="Custom.Treeview")
+        self.item_tree.heading("Item", text="Table Name")
+        self.item_tree.column("Item", anchor="w", width=200)
+        self.item_tree.grid(row=0, column=0, sticky="nsew")
+        self.item_tree.bind("<<TreeviewSelect>>", self.on_item_select)
+        # (We no longer use double-click to show fields because fields will be shown in the right box.)
+        # Right treeview: List of fields (columns) for the selected table.
+        self.fields_tree = ttk.Treeview(self.bottom_frame, columns=("Field",), show="headings", style="Custom.Treeview")
+        self.fields_tree.heading("Field", text="Fields")
+        self.fields_tree.column("Field", anchor="w", width=200)
+        self.fields_tree.grid(row=0, column=1, sticky="nsew")
 
         self.bind("<<ShowFrame>>", lambda e: self.load_databases())
 
@@ -134,18 +143,18 @@ class DBManagementPage(ttk.Frame):
             self.db_tree.insert("", tk.END, values=(db,))
         self.db_search_var.set("")
         self.clear_details()
-        self.in_columns_view = False
         self.back_button.grid_remove()
         self.right_label.config(text="Tables")
         self.item_search_var.set("")
         self.item_tree.delete(*self.item_tree.get_children())
+        self.fields_tree.delete(*self.fields_tree.get_children())
 
     def clear_details(self):
-        """Clear the details and tables/columns views."""
+        """Clear the details text and the fields tree."""
         self.details_text.config(state="normal")
         self.details_text.delete("1.0", tk.END)
         self.details_text.config(state="disabled")
-        self.item_tree.delete(*self.item_tree.get_children())
+        self.fields_tree.delete(*self.fields_tree.get_children())
 
     def filter_databases(self, event):
         """Filter the database list based on the search term."""
@@ -180,64 +189,61 @@ class DBManagementPage(ttk.Frame):
         self.all_items = tables
         self.populate_items(self.all_items, header="Table Name")
         self.right_label.config(text="Tables")
-        self.in_columns_view = False
         self.back_button.grid_remove()
         self.item_search_var.set("")
+        self.fields_tree.delete(*self.fields_tree.get_children())
 
     def populate_items(self, items, header="Table Name"):
-        """Populate the item tree with items (tables or columns)."""
+        """Populate the left treeview with items (tables)."""
         self.item_tree.delete(*self.item_tree.get_children())
         self.item_tree.heading("Item", text=header)
         for item in items:
             self.item_tree.insert("", tk.END, values=(item,))
 
     def filter_items(self, event):
-        """Filter tables/columns based on the search term."""
+        """Filter the tables based on the search term."""
         term = self.item_search_var.get().lower()
         filtered = [item for item in self.all_items if term in item.lower()]
-        header = "Column Name" if self.in_columns_view else "Table Name"
-        self.populate_items(filtered, header=header)
+        self.populate_items(filtered, header="Table Name")
 
     def on_item_select(self, event):
-        """When a table is selected (single-click), update details with its info."""
-        if self.in_columns_view:
-            return
+        """
+        When a table is selected, update the details text with basic table info
+        (table name and record count) and populate the fields_tree with the list of fields.
+        """
         selected = self.item_tree.selection()
         if not selected:
             return
         item = self.item_tree.item(selected[0])
         table_name = item['values'][0]
         credentials = self.controller.db_credentials
+        # Get basic table details (e.g., record count)
         table_details = get_table_details(credentials, self.current_db, table_name)
         details_str = ""
         if table_details:
-            for key, value in table_details.items():
-                details_str += f"{key}: {value}\n"
+            details_str += f"Table Name: {table_details.get('Table Name')}\n"
+            details_str += f"Record Count: {table_details.get('Record Count')}\n"
         else:
-            details_str = "No details available for this table."
+            details_str += "No table details available.\n"
         self.details_text.config(state="normal")
         self.details_text.delete("1.0", tk.END)
         self.details_text.insert(tk.END, details_str)
         self.details_text.config(state="disabled")
+        # Populate the fields_tree with columns.
+        columns = get_columns_for_table(credentials, self.current_db, table_name)
+        self.fields_tree.delete(*self.fields_tree.get_children())
+        if columns:
+            for col in sorted(columns):
+                self.fields_tree.insert("", tk.END, values=(col,))
+        else:
+            self.fields_tree.insert("", tk.END, values=("No fields available",))
 
     def on_item_double_click(self, event):
-        """When a table is double-clicked, show its columns."""
-        if self.in_columns_view:
-            return
-        selected = self.item_tree.selection()
-        if not selected:
-            return
-        item = self.item_tree.item(selected[0])
-        table_name = item['values'][0]
-        credentials = self.controller.db_credentials
-        columns = get_columns_for_table(credentials, self.current_db, table_name)
-        columns = sorted(columns)
-        self.all_items = columns
-        self.populate_items(columns, header="Column Name")
-        self.right_label.config(text=f"Columns in '{table_name}'")
-        self.back_button.grid()  # Show back button
-        self.in_columns_view = True
-        self.item_search_var.set("")
+        """
+        Double-click behavior can be repurposed if needed.
+        For now, we leave it empty since fields are automatically shown.
+        """
+        pass
 
     def back_to_tables(self):
         """Return to the tables view for the current database."""
@@ -250,7 +256,6 @@ class DBManagementPage(ttk.Frame):
         self.populate_items(tables, header="Table Name")
         self.right_label.config(text="Tables")
         self.back_button.grid_remove()
-        self.in_columns_view = False
         self.item_search_var.set("")
         details = get_database_details(credentials, self.current_db)
         details_str = ""
@@ -263,6 +268,7 @@ class DBManagementPage(ttk.Frame):
         self.details_text.delete("1.0", tk.END)
         self.details_text.insert(tk.END, details_str)
         self.details_text.config(state="disabled")
+        self.fields_tree.delete(*self.fields_tree.get_children())
 
     def delete_selected_database(self):
         """Delete the currently selected database after confirmation."""
