@@ -3,7 +3,6 @@ from tkinter import ttk, messagebox
 import threading
 from db import fetch_databases, copy_database_logic
 
-
 class CopierPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -60,11 +59,12 @@ class CopierPage(ttk.Frame):
         self.bind("<<ShowFrame>>", lambda e: self.load_databases())
 
     def load_databases(self):
-        """Load the list of databases from the server."""
+        """Load the list of databases from the server in alphabetical order."""
         credentials = self.controller.db_credentials
         if not credentials:
             return
-        db_list = fetch_databases(credentials)
+        # Sort the list of databases alphabetically
+        db_list = sorted(fetch_databases(credentials))
         self.db_combo['values'] = db_list
         if db_list:
             self.db_combo.current(0)
