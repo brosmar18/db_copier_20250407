@@ -21,29 +21,39 @@ def create_database(credentials, db_name):
     finally:
         conn.close()
 
-def restore_database(credentials, db_name, backup_file):
+def restore_database(credentials, db_name, backup_file, pg_restore_dir=None):
     """
     Restore the specified database from a local .backup file using pg_restore.
+    
+    Parameters:
+      - credentials: Database connection credentials.
+      - db_name: Name of the database to restore.
+      - backup_file: Path to the backup file.
+      - pg_restore_dir: Optional; user-specified directory containing pg_restore.exe.
+                        If provided, the directory will be appended with 'pg_restore.exe'.
+                        Otherwise, the function will try system PATH, environment variable,
+                        or fall back to the default full path.
     """
     if not os.path.exists(backup_file):
         raise Exception("Backup file does not exist.")
     
-    # Try to locate pg_restore in the system PATH.
-    pg_restore_exe = shutil.which("pg_restore")
-    
-    # If not found, check for the PG_RESTORE_PATH environment variable.
-    if pg_restore_exe is None:
-        # Fallback: try to get from environment variable or default to our known path.
-        pg_restore_exe = os.environ.get("PG_RESTORE_PATH", r"C:\Program Files\PostgreSQL\12\bin\pg_restore.exe")
+    if pg_restore_dir and pg_restore_dir.strip() != "":
+        # Append 'pg_restore.exe' to the user-provided directory.
+        pg_restore_exe = os.path.join(pg_restore_dir, "pg_restore.exe")
         if not os.path.exists(pg_restore_exe):
-            raise Exception(
-                "pg_restore executable not found in system PATH. "
-                "Please ensure PostgreSQL's bin folder is in your PATH, "
-                "or set the PG_RESTORE_PATH environment variable to the full path of pg_restore."
-            )
-    
-    # Debug print (optional)
-    # print("Using pg_restore executable at:", pg_restore_exe)
+            raise Exception(f"Provided pg_restore directory does not contain pg_restore.exe: {pg_restore_exe}")
+    else:
+        # Try to locate pg_restore in the system PATH.
+        pg_restore_exe = shutil.which("pg_restore")
+        if pg_restore_exe is None:
+            # Fallback: try to get from environment variable or default to our known full path.
+            pg_restore_exe = os.environ.get("PG_RESTORE_PATH", r"C:\Program Files\PostgreSQL\12\bin\pg_restore.exe")
+            if not os.path.exists(pg_restore_exe):
+                raise Exception(
+                    "pg_restore executable not found in system PATH. "
+                    "Please ensure PostgreSQL's bin folder is in your PATH, "
+                    "or set the PG_RESTORE_PATH environment variable to the full path of pg_restore."
+                )
     
     # Construct the pg_restore command.
     cmd = [

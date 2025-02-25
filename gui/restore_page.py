@@ -1,3 +1,4 @@
+# restore_page.py
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
@@ -39,24 +40,31 @@ class RestorePage(ttk.Frame):
         browse_btn = ttk.Button(content_frame, text="Browse", command=self.browse_file)
         browse_btn.grid(row=2, column=2, padx=5, pady=5)
 
+        # pg_restore directory input.
+        ttk.Label(content_frame, text="Binary Path:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
+        # Default value is just the directory without 'pg_restore.exe'
+        self.pg_restore_path_var = tk.StringVar(value=r"C:\Program Files\PostgreSQL\12\bin")
+        self.pg_restore_path_entry = ttk.Entry(content_frame, textvariable=self.pg_restore_path_var, width=30)
+        self.pg_restore_path_entry.grid(row=3, column=1, padx=5, pady=5)
+
         # Restore button.
         restore_btn = ttk.Button(content_frame, text="Restore Database", command=self.restore_database_action)
-        restore_btn.grid(row=3, column=0, columnspan=3, pady=10)
+        restore_btn.grid(row=4, column=0, columnspan=3, pady=10)
 
         # Progress bar.
         self.progress_bar = ttk.Progressbar(content_frame, mode="determinate", maximum=100,
                                             style="Custom.Horizontal.TProgressbar")
-        self.progress_bar.grid(row=4, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.progress_bar.grid(row=5, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
         self.progress_bar.grid_remove()
 
         # Embed the Snake game.
         self.snake_game = SnakeGame(content_frame, width=300, height=200)
-        self.snake_game.grid(row=5, column=0, columnspan=3, padx=10, pady=10)
+        self.snake_game.grid(row=6, column=0, columnspan=3, padx=10, pady=10)
         self.snake_game.grid_remove()  # Hidden initially
 
         # Back button.
         back_btn = ttk.Button(content_frame, text="Back", command=lambda: controller.show_frame("DBManagementPage"))
-        back_btn.grid(row=6, column=0, columnspan=3, pady=5)
+        back_btn.grid(row=7, column=0, columnspan=3, pady=5)
 
     def browse_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Backup Files", "*.backup"), ("All Files", "*.*")])
@@ -87,6 +95,7 @@ class RestorePage(ttk.Frame):
     def restore_database_action(self):
         db_name = self.db_name_var.get().strip()
         backup_file = self.backup_file_var.get().strip()
+        pg_restore_dir = self.pg_restore_path_var.get().strip()
         if not db_name:
             messagebox.showerror("Input Error", "Please enter a new database name.")
             return
@@ -98,13 +107,12 @@ class RestorePage(ttk.Frame):
         self.progress_bar['value'] = 0
         self.progress_bar.grid()
         self.snake_game.grid()  # Ensure game widget is visible
-        # The snake game includes its own "Start Game" button overlay.
         
         def run_restore():
             credentials = self.controller.db_credentials
             try:
                 create_database(credentials, db_name)
-                restore_database(credentials, db_name, backup_file)
+                restore_database(credentials, db_name, backup_file, pg_restore_dir)
             except Exception as e:
                 err = str(e)
                 try:
