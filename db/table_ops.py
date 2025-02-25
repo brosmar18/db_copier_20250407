@@ -49,7 +49,9 @@ def get_columns_for_table(credentials, db_name, table_name):
 def get_table_details(credentials, db_name, table_name):
     """
     Fetch details about a specific table from the public schema.
-    Returns a dictionary with table details.
+    Returns a dictionary with:
+      - Table Name
+      - Record Count (an estimated number of records)
     """
     conn = connect_to_db(credentials, database=db_name)
     if not conn:
@@ -58,9 +60,7 @@ def get_table_details(credentials, db_name, table_name):
         cur = conn.cursor()
         query = """
             SELECT c.relname AS table_name,
-                   pg_catalog.pg_get_userbyid(c.relowner) AS owner,
-                   c.reltuples::bigint AS estimated_rows,
-                   COALESCE(obj_description(c.oid), 'No description') AS description
+                   c.reltuples::bigint AS estimated_rows
             FROM pg_class c
             WHERE c.relname = %s AND c.relkind = 'r';
         """
@@ -69,9 +69,7 @@ def get_table_details(credentials, db_name, table_name):
         if row:
             details = {
                 "Table Name": row[0],
-                "Owner": row[1],
-                "Estimated Rows": row[2],
-                "Description": row[3]
+                "Record Count": row[1]
             }
             return details
         else:

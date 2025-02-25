@@ -56,7 +56,10 @@ def copy_database_logic(credentials, src_db, new_db, update_status_callback):
 def get_database_details(credentials, db_name):
     """
     Fetch detailed information for a specific database.
-    Returns a dictionary of details.
+    Returns a dictionary with:
+      - Database Name
+      - Active Connections (number of connections currently active)
+      - Last Updated (formatted as MM/DD/YYYY)
     """
     conn = connect_to_db(credentials)
     if not conn:
@@ -65,13 +68,10 @@ def get_database_details(credentials, db_name):
         cur = conn.cursor()
         query = """
             SELECT d.datname,
-                   (SELECT rolname FROM pg_roles WHERE oid = d.datdba) AS owner,
-                   d.encoding,
-                   d.datcollate,
-                   d.datctype,
-                   d.datistemplate,
-                   d.datallowconn
+                   (SELECT count(*) FROM pg_stat_activity WHERE datname = d.datname) AS active_connections,
+                   to_char(s.stats_reset, 'MM/DD/YYYY') as last_updated
             FROM pg_database d
+            JOIN pg_stat_database s ON d.datname = s.datname
             WHERE d.datname = %s;
         """
         cur.execute(query, (db_name,))
@@ -79,12 +79,8 @@ def get_database_details(credentials, db_name):
         if row:
             details = {
                 "Database Name": row[0],
-                "Owner": row[1],
-                "Encoding": row[2],
-                "Collate": row[3],
-                "Ctype": row[4],
-                "Template": row[5],
-                "Allow Connections": row[6]
+                "Active Connections": row[1],
+                "Last Updated": row[2]
             }
             return details
         else:
