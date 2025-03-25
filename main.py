@@ -1,10 +1,20 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+import sys
+import ctypes
+import os
 from gui.login_page import LoginPage
 from gui.copier_page import CopierPage
 from gui.db_management_page import DBManagementPage
 from gui.restore_page import RestorePage
-from gui.services_page import ServicesPage  # Import the new services page
+from gui.services_page import ServicesPage
+
+def is_admin():
+    """Check if the application is running as administrator"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
 class App(tk.Tk):
     def __init__(self):
@@ -31,7 +41,7 @@ class App(tk.Tk):
         
         # Dictionary to hold pages
         self.frames = {}
-        for Page in (LoginPage, CopierPage, DBManagementPage, RestorePage, ServicesPage):  # Add ServicesPage
+        for Page in (LoginPage, CopierPage, DBManagementPage, RestorePage, ServicesPage):
             page_name = Page.__name__
             frame = Page(parent=self.container, controller=self)
             self.frames[page_name] = frame
@@ -88,7 +98,7 @@ class App(tk.Tk):
                                 command=lambda: self.show_frame("RestorePage"))
         restore_btn.pack(side="left", padx=5)
         
-        # Add the new Services button
+        # Add the Services button
         services_btn = ttk.Button(btn_frame, text="Services", style="Nav.TButton",
                                 command=lambda: self.show_frame("ServicesPage"))
         services_btn.pack(side="left", padx=5)
@@ -113,5 +123,37 @@ class App(tk.Tk):
         self.show_frame("LoginPage")
 
 if __name__ == "__main__":
+    try:
+        # Check if running as admin, if not, restart with admin privileges
+        if not is_admin():
+            # Get the script path
+            script = os.path.abspath(sys.argv[0])
+            
+            # Create a proper command string with quotes to handle paths with spaces
+            params = ' '.join([f'"{x}"' for x in sys.argv[1:]])
+            
+            # Re-run the program with admin rights
+            result = ctypes.windll.shell32.ShellExecuteW(
+                None,            # No parent window
+                "runas",         # Operation to perform (run as admin)
+                sys.executable,  # Program to execute (Python interpreter)
+                f'"{script}" {params}',  # Parameters (script path and args)
+                None,            # Working directory (None = current)
+                1                # Show window (1 = normal window)
+            )
+            
+            # Check for error (result <= 32 means an error occurred)
+            if result <= 32:
+                # If elevation failed, continue anyway
+                print(f"Warning: Failed to elevate privileges. Result code: {result}")
+            else:
+                # Exit the non-admin instance
+                sys.exit(0)
+    except Exception as e:
+        # If there's an error in the elevation code, log it and continue
+        print(f"Error during privilege elevation: {e}")
+        # We'll continue running without admin rights
+    
+    # Continue with normal execution
     app = App()
     app.mainloop()

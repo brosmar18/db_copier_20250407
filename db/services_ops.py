@@ -1,6 +1,21 @@
 import subprocess
 import threading
 import time
+import os
+
+def is_admin():
+    """Check if the application is running with administrator privileges"""
+    try:
+        # This will fail with an AccessDenied error if not admin
+        return os.getuid() == 0
+    except AttributeError:
+        # For Windows systems
+        try:
+            return subprocess.run(["net", "session"], 
+                stdout=subprocess.DEVNULL, 
+                stderr=subprocess.DEVNULL).returncode == 0
+        except Exception:
+            return False
 
 def get_all_services():
     """
@@ -42,6 +57,24 @@ def get_all_services():
         print(f"Error retrieving services: {e}")
         return []
 
+def extract_powershell_error(stderr):
+    """Extract a more user-friendly error message from PowerShell stderr output"""
+    if not stderr:
+        return "Unknown error occurred"
+    
+    # Try to extract the main error message
+    lines = stderr.strip().split('\n')
+    
+    # Look for lines that contain error descriptions
+    for line in lines:
+        if ":" in line and not line.startswith("-") and not line.startswith("At "):
+            parts = line.split(":", 1)
+            if len(parts) >= 2 and parts[1].strip():
+                return parts[1].strip()
+    
+    # If no specific error found, return the first line
+    return lines[0] if lines else "Unknown error occurred"
+
 def start_service(service_name, callback=None):
     """
     Start a Windows service.
@@ -55,6 +88,9 @@ def start_service(service_name, callback=None):
     """
     def _execute():
         try:
+            # Check if admin and prepare warning message
+            admin_warning = "" if is_admin() else "\n\nNote: Some services require administrator privileges to control."
+            
             # Use PowerShell to start the service
             cmd = ["powershell", "-Command", f"Start-Service -Name '{service_name}' -ErrorAction Stop; Write-Output 'Service started successfully'"]
             
@@ -65,7 +101,8 @@ def start_service(service_name, callback=None):
                 message = "Service started successfully"
             else:
                 success = False
-                message = result.stderr.strip() or "Failed to start service"
+                error_msg = extract_powershell_error(result.stderr)
+                message = f"Failed to start service: {error_msg}{admin_warning}"
                 
             if callback:
                 callback(success, message)
@@ -85,7 +122,7 @@ def start_service(service_name, callback=None):
 
 def stop_service(service_name, callback=None):
     """
-    Stop a Windows service.
+    Stop a Windows service with force parameter to ensure more reliable stopping.
     
     Args:
         service_name: Name of the service to stop
@@ -96,8 +133,11 @@ def stop_service(service_name, callback=None):
     """
     def _execute():
         try:
-            # Use PowerShell to stop the service
-            cmd = ["powershell", "-Command", f"Stop-Service -Name '{service_name}' -ErrorAction Stop; Write-Output 'Service stopped successfully'"]
+            # Check if admin and prepare warning message
+            admin_warning = "" if is_admin() else "\n\nNote: Some services require administrator privileges to control."
+            
+            # Use PowerShell to stop the service with -Force parameter
+            cmd = ["powershell", "-Command", f"Stop-Service -Name '{service_name}' -Force -ErrorAction Stop; Write-Output 'Service stopped successfully'"]
             
             result = subprocess.run(cmd, capture_output=True, text=True)
             
@@ -106,7 +146,8 @@ def stop_service(service_name, callback=None):
                 message = "Service stopped successfully"
             else:
                 success = False
-                message = result.stderr.strip() or "Failed to stop service"
+                error_msg = extract_powershell_error(result.stderr)
+                message = f"Failed to stop service: {error_msg}{admin_warning}"
                 
             if callback:
                 callback(success, message)
@@ -137,8 +178,11 @@ def restart_service(service_name, callback=None):
     """
     def _execute():
         try:
+            # Check if admin and prepare warning message
+            admin_warning = "" if is_admin() else "\n\nNote: Some services require administrator privileges to control."
+            
             # Use PowerShell to restart the service
-            cmd = ["powershell", "-Command", f"Restart-Service -Name '{service_name}' -ErrorAction Stop; Write-Output 'Service restarted successfully'"]
+            cmd = ["powershell", "-Command", f"Restart-Service -Name '{service_name}' -Force -ErrorAction Stop; Write-Output 'Service restarted successfully'"]
             
             result = subprocess.run(cmd, capture_output=True, text=True)
             
@@ -147,7 +191,8 @@ def restart_service(service_name, callback=None):
                 message = "Service restarted successfully"
             else:
                 success = False
-                message = result.stderr.strip() or "Failed to restart service"
+                error_msg = extract_powershell_error(result.stderr)
+                message = f"Failed to restart service: {error_msg}{admin_warning}"
                 
             if callback:
                 callback(success, message)
