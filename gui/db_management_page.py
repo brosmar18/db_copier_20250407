@@ -74,7 +74,7 @@ class DBManagementPage(ttk.Frame):
         self.db_search_entry.pack(side="left", fill="x", expand=True, padx=5)
         self.db_search_entry.bind("<KeyRelease>", self.filter_databases)
 
-        self.db_tree = ttk.Treeview(left_frame, columns=("Database",), show="headings", selectmode="browse")
+        self.db_tree = ttk.Treeview(left_frame, columns=("Database",), show="headings", selectmode="extended")
         self.db_tree.heading("Database", text="Database Name")
         self.db_tree.column("Database", anchor="w", width=200)
         self.db_tree.pack(expand=True, fill="both", pady=5)
@@ -271,25 +271,26 @@ class DBManagementPage(ttk.Frame):
         self.fields_tree.delete(*self.fields_tree.get_children())
 
     def delete_selected_database(self):
-        """Delete the currently selected database after confirmation."""
         selected = self.db_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "No database selected for deletion.")
             return
-        item = self.db_tree.item(selected[0])
-        db_name = item['values'][0]
+        # Get all selected database names
+        db_names = [self.db_tree.item(item)['values'][0] for item in selected]
         confirm = messagebox.askokcancel(
             "Confirm Deletion",
-            f"WARNING: This will permanently delete the database:\n\n{db_name}\n\nThis action cannot be undone.\nDo you want to proceed?"
+            f"WARNING: This will permanently delete the following databases:\n\n{', '.join(db_names)}\n\nThis action cannot be undone.\nDo you want to proceed?"
         )
         if not confirm:
             return
         def delete_database():
             credentials = self.controller.db_credentials
-            try:
-                terminate_and_delete_database(credentials, db_name)
-            except Exception as e:
-                messagebox.showerror("Error", f"Error deleting database {db_name}: {e}")
+            for db_name in db_names:
+                try:
+                    terminate_and_delete_database(credentials, db_name)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Error deleting database {db_name}: {e}")
             self.load_databases()
-            messagebox.showinfo("Deletion Complete", "Database has been deleted.")
+            messagebox.showinfo("Deletion Complete", "Database(s) have been deleted.")
         threading.Thread(target=delete_database, daemon=True).start()
+

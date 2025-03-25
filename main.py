@@ -4,11 +4,12 @@ from gui.login_page import LoginPage
 from gui.copier_page import CopierPage
 from gui.db_management_page import DBManagementPage
 from gui.restore_page import RestorePage
+from gui.services_page import ServicesPage  # Import the new services page
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("PostgreSQL Database Manager")
+        self.title("DB Manager")
         self.geometry("800x600")
         
         # Setup custom styles.
@@ -30,7 +31,7 @@ class App(tk.Tk):
         
         # Dictionary to hold pages
         self.frames = {}
-        for Page in (LoginPage, CopierPage, DBManagementPage, RestorePage):
+        for Page in (LoginPage, CopierPage, DBManagementPage, RestorePage, ServicesPage):  # Add ServicesPage
             page_name = Page.__name__
             frame = Page(parent=self.container, controller=self)
             self.frames[page_name] = frame
@@ -76,16 +77,21 @@ class App(tk.Tk):
         btn_frame.pack(side="right", padx=20)
         
         copier_btn = ttk.Button(btn_frame, text="Copier", style="Nav.TButton",
-                                  command=lambda: self.show_frame("CopierPage"))
+                                command=lambda: self.show_frame("CopierPage"))
         copier_btn.pack(side="left", padx=5)
         
         db_mgmt_btn = ttk.Button(btn_frame, text="DB Management", style="Nav.TButton",
-                                   command=lambda: self.show_frame("DBManagementPage"))
+                                command=lambda: self.show_frame("DBManagementPage"))
         db_mgmt_btn.pack(side="left", padx=5)
         
         restore_btn = ttk.Button(btn_frame, text="Restore", style="Nav.TButton",
-                                  command=lambda: self.show_frame("RestorePage"))
+                                command=lambda: self.show_frame("RestorePage"))
         restore_btn.pack(side="left", padx=5)
+        
+        # Add the new Services button
+        services_btn = ttk.Button(btn_frame, text="Services", style="Nav.TButton",
+                                command=lambda: self.show_frame("ServicesPage"))
+        services_btn.pack(side="left", padx=5)
         
         logout_btn = ttk.Button(btn_frame, text="Logout", style="Logout.TButton", command=self.logout)
         logout_btn.pack(side="left", padx=5)
