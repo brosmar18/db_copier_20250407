@@ -9,6 +9,7 @@ from db import (
     get_table_details,
     terminate_and_delete_database,
     copy_database_logic,
+    rename_database,
 )
 
 
@@ -404,6 +405,9 @@ class DBManagementPage(ttk.Frame):
             self.db_context_menu.add_command(
                 label="🔁 Clone DB", command=self.clone_database
             )
+            self.db_context_menu.add_command(
+                label="✏️ Rename DB", command=self.rename_database
+            )
             self.db_context_menu.add_separator()
             self.db_context_menu.add_command(
                 label="🗑️ Delete DB", command=self.delete_database_from_context
@@ -651,6 +655,224 @@ class DBManagementPage(ttk.Frame):
         name_entry.focus()
         dialog.wait_window()
 
+    def rename_database(self):
+        """Open dialog for renaming a database."""
+        # Only allow renaming one database at a time
+        if not self.context_menu_dbs:
+            return
+
+        if len(self.context_menu_dbs) > 1:
+            messagebox.showwarning(
+                "Rename Limitation",
+                "Please select only one database to rename.\n"
+                f"Currently selected: {len(self.context_menu_dbs)} databases",
+            )
+            return
+
+        source_db = self.context_menu_dbs[0]
+
+        dialog = tk.Toplevel(self)
+        dialog.title("✏️ Rename Database")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Apply color schema to dialog
+        dialog.configure(bg="#181F67")  # Navy blue background
+
+        # Setup custom styles for this dialog
+        style = ttk.Style()
+
+        # Dialog-specific frame style
+        style.configure("Rename.TFrame", background="#181F67", relief="flat")
+
+        # Dialog-specific label style
+        style.configure(
+            "Rename.TLabel",
+            background="#181F67",
+            foreground="white",
+            font=("Helvetica", 10),
+        )
+
+        # Dialog-specific entry style
+        style.configure(
+            "Rename.TEntry",
+            font=("Helvetica", 10),
+            fieldbackground="white",
+            borderwidth=1,
+            relief="solid",
+        )
+
+        # Dialog OK button style (green)
+        style.configure(
+            "RenameOK.TButton",
+            background="#7BB837",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(10, 5),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("RenameOK.TButton", background=[("active", "#6AA62F")])
+
+        # Dialog Cancel button style (gray)
+        style.configure(
+            "RenameCancel.TButton",
+            background="#939498",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(10, 5),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("RenameCancel.TButton", background=[("active", "#7A7A7A")])
+
+        # Progress bar style
+        style.configure(
+            "Rename.Horizontal.TProgressbar",
+            troughcolor="#E0E0E0",
+            background="#7BB837",
+            thickness=15,
+        )
+
+        # Variables
+        new_name_var = tk.StringVar(value=source_db)
+        self.rename_in_progress = False
+
+        # Main content frame with styled background
+        content_frame = ttk.Frame(dialog, style="Rename.TFrame", padding=25)
+        content_frame.pack(fill="both", expand=True)
+
+        # Configure grid weights for proper expansion
+        content_frame.columnconfigure(1, weight=1)
+
+        # Current database name (read-only)
+        ttk.Label(content_frame, text="Current Name:", style="Rename.TLabel").grid(
+            row=0, column=0, padx=(0, 10), pady=(10, 5), sticky="w"
+        )
+        current_name_entry = ttk.Entry(content_frame, width=35, style="Rename.TEntry")
+        current_name_entry.insert(0, source_db)
+        current_name_entry.config(state="readonly")
+        current_name_entry.grid(
+            row=0, column=1, padx=(0, 10), pady=(10, 5), sticky="ew"
+        )
+
+        # New database name entry
+        ttk.Label(content_frame, text="New Name:", style="Rename.TLabel").grid(
+            row=1, column=0, padx=(0, 10), pady=(10, 5), sticky="w"
+        )
+        new_name_entry = ttk.Entry(
+            content_frame, textvariable=new_name_var, width=35, style="Rename.TEntry"
+        )
+        new_name_entry.grid(row=1, column=1, padx=(0, 10), pady=(10, 5), sticky="ew")
+
+        # Progress bar (initially hidden)
+        progress_bar = ttk.Progressbar(
+            content_frame, mode="indeterminate", style="Rename.Horizontal.TProgressbar"
+        )
+        progress_bar.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        progress_bar.grid_remove()
+
+        # Status label (initially hidden)
+        status_label = ttk.Label(content_frame, text="", style="Rename.TLabel")
+        status_label.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        status_label.grid_remove()
+
+        # Button handlers
+        def update_status(message):
+            """Update status label from background thread"""
+            dialog.after(0, lambda: status_label.config(text=message))
+
+        def perform_rename():
+            """Perform the actual rename operation"""
+            new_name = new_name_var.get().strip()
+            credentials = self.controller.db_credentials
+
+            try:
+                rename_database(credentials, source_db, new_name, update_status)
+
+                # Success - update UI
+                dialog.after(
+                    0, lambda: self.finish_rename_success(dialog, source_db, new_name)
+                )
+
+            except Exception as e:
+                # Error - show error message
+                dialog.after(0, lambda: self.finish_rename_error(dialog, str(e)))
+
+        def on_rename():
+            if self.rename_in_progress:
+                return
+
+            new_name = new_name_var.get().strip()
+
+            if not new_name:
+                messagebox.showwarning(
+                    "Input Error", "Please enter a new database name."
+                )
+                return
+
+            if new_name == source_db:
+                messagebox.showwarning(
+                    "Input Error", "New name must be different from current name."
+                )
+                return
+
+            # Disable buttons and show progress
+            self.rename_in_progress = True
+            rename_btn.config(state="disabled")
+            cancel_btn.config(text="Close", state="disabled")
+            current_name_entry.config(state="disabled")
+            new_name_entry.config(state="disabled")
+
+            progress_bar.grid()
+            progress_bar.start(10)
+            status_label.grid()
+            status_label.config(text="Starting rename operation...")
+
+            # Start renaming in background thread
+            rename_thread = threading.Thread(target=perform_rename, daemon=True)
+            rename_thread.start()
+
+        def on_cancel():
+            if not self.rename_in_progress:
+                dialog.destroy()
+
+        # Buttons with styled frame
+        btn_frame = ttk.Frame(content_frame, style="Rename.TFrame")
+        btn_frame.grid(row=2, column=0, columnspan=2, pady=(25, 15))
+
+        rename_btn = ttk.Button(
+            btn_frame,
+            text="Rename Database",
+            command=on_rename,
+            style="RenameOK.TButton",
+        )
+        rename_btn.pack(side="left", padx=15)
+
+        cancel_btn = ttk.Button(
+            btn_frame, text="Cancel", command=on_cancel, style="RenameCancel.TButton"
+        )
+        cancel_btn.pack(side="right", padx=15)
+
+        # Set minimum size and center the dialog
+        dialog.minsize(500, 280)
+        dialog.geometry("500x280")
+
+        # Center dialog on parent window
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
+        y = (
+            self.winfo_rooty()
+            + (self.winfo_height() // 2)
+            - (dialog.winfo_height() // 2)
+        )
+        dialog.geometry(f"+{x}+{y}")
+
+        # Focus on new name entry and select all text for easy editing
+        new_name_entry.focus()
+        new_name_entry.select_range(0, tk.END)
+        dialog.wait_window()
+
     def finish_clone_success(self, dialog, count, base_name):
         """Handle successful clone completion"""
         self.clone_in_progress = False
@@ -670,6 +892,26 @@ class DBManagementPage(ttk.Frame):
         self.clone_in_progress = False
         messagebox.showerror(
             "Clone Error", f"Failed to clone database:\n{error_message}"
+        )
+        dialog.destroy()
+
+    def finish_rename_success(self, dialog, old_name, new_name):
+        """Handle successful rename completion"""
+        self.rename_in_progress = False
+        messagebox.showinfo(
+            "Rename Complete",
+            f"Database '{old_name}' has been successfully renamed to '{new_name}'!",
+        )
+        dialog.destroy()
+
+        # Refresh the database list to show the renamed database
+        self.load_databases()
+
+    def finish_rename_error(self, dialog, error_message):
+        """Handle rename operation error"""
+        self.rename_in_progress = False
+        messagebox.showerror(
+            "Rename Error", f"Failed to rename database:\n{error_message}"
         )
         dialog.destroy()
 
