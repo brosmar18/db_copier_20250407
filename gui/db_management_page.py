@@ -107,7 +107,7 @@ class DBManagementPage(ttk.Frame):
         self.db_tree.pack(expand=True, fill="both", pady=5)
         self.db_tree.bind("<<TreeviewSelect>>", self.on_db_select)
 
-        # --- CONTEXT MENU: only one option ---
+        # --- CONTEXT MENU: clone and delete options ---
         self.db_context_menu = tk.Menu(
             self,
             tearoff=0,
@@ -119,6 +119,10 @@ class DBManagementPage(ttk.Frame):
         )
         self.db_context_menu.add_command(
             label="🔁 Clone DB", command=self.clone_database
+        )
+        self.db_context_menu.add_separator()
+        self.db_context_menu.add_command(
+            label="🗑️ Delete DB", command=self.delete_database_from_context
         )
 
         # bind right-click / ctrl+click / menu key
@@ -620,3 +624,175 @@ class DBManagementPage(ttk.Frame):
             "Clone Error", f"Failed to clone database:\n{error_message}"
         )
         dialog.destroy()
+
+    def delete_database_from_context(self):
+        """Delete a single database from context menu with styled confirmation dialog"""
+        db_name = self.context_menu_db
+        if not db_name:
+            return
+
+        # Create custom confirmation dialog
+        dialog = tk.Toplevel(self)
+        dialog.title("⚠️ Delete Database")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Apply color schema to dialog
+        dialog.configure(bg="#181F67")  # Navy blue background
+
+        # Setup custom styles for this dialog
+        style = ttk.Style()
+
+        # Dialog-specific frame style
+        style.configure("Warning.TFrame", background="#181F67", relief="flat")
+
+        # Dialog-specific label style
+        style.configure(
+            "Warning.TLabel",
+            background="#181F67",
+            foreground="white",
+            font=("Helvetica", 11),
+        )
+
+        # Warning header label style
+        style.configure(
+            "WarningHeader.TLabel",
+            background="#181F67",
+            foreground="#FFD700",  # Gold color for warning
+            font=("Helvetica", 14, "bold"),
+        )
+
+        # Database name label style
+        style.configure(
+            "DatabaseName.TLabel",
+            background="#181F67",
+            foreground="#FF6B6B",  # Light red for emphasis
+            font=("Helvetica", 12, "bold"),
+        )
+
+        # Dialog Delete button style (red)
+        style.configure(
+            "DialogDelete.TButton",
+            background="#D9534F",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("DialogDelete.TButton", background=[("active", "#C9302C")])
+
+        # Dialog Cancel button style (gray)
+        style.configure(
+            "DialogCancelWarning.TButton",
+            background="#939498",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("DialogCancelWarning.TButton", background=[("active", "#7A7A7A")])
+
+        # Main content frame with styled background
+        content_frame = ttk.Frame(dialog, style="Warning.TFrame", padding=30)
+        content_frame.pack(fill="both", expand=True)
+
+        # Warning icon and header
+        ttk.Label(
+            content_frame, text="⚠️ CRITICAL WARNING", style="WarningHeader.TLabel"
+        ).pack(pady=(0, 15))
+
+        # Warning message
+        warning_text = (
+            "You are about to permanently delete the following database:\n\n"
+            "This action will:\n"
+            "• Terminate all active connections\n"
+            "• Permanently delete all data\n"
+            "• Cannot be undone\n\n"
+            "Are you absolutely sure you want to proceed?"
+        )
+        ttk.Label(
+            content_frame, text=warning_text, style="Warning.TLabel", justify="center"
+        ).pack(pady=(0, 10))
+
+        # Database name highlight
+        ttk.Label(content_frame, text=f'"{db_name}"', style="DatabaseName.TLabel").pack(
+            pady=(0, 20)
+        )
+
+        # Button handlers
+        def on_delete():
+            dialog.destroy()
+            self.perform_database_deletion(db_name)
+
+        def on_cancel():
+            dialog.destroy()
+
+        # Buttons with styled frame
+        btn_frame = ttk.Frame(content_frame, style="Warning.TFrame")
+        btn_frame.pack(pady=(20, 0))
+
+        delete_btn = ttk.Button(
+            btn_frame,
+            text="DELETE DATABASE",
+            command=on_delete,
+            style="DialogDelete.TButton",
+        )
+        delete_btn.pack(side="left", padx=20)
+
+        cancel_btn = ttk.Button(
+            btn_frame,
+            text="Cancel",
+            command=on_cancel,
+            style="DialogCancelWarning.TButton",
+        )
+        cancel_btn.pack(side="right", padx=20)
+
+        # Set minimum size and center the dialog
+        dialog.minsize(450, 350)
+        dialog.geometry("450x350")
+
+        # Center dialog on parent window
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
+        y = (
+            self.winfo_rooty()
+            + (self.winfo_height() // 2)
+            - (dialog.winfo_height() // 2)
+        )
+        dialog.geometry(f"+{x}+{y}")
+
+        # Focus on cancel button by default (safer)
+        cancel_btn.focus()
+        dialog.wait_window()
+
+    def perform_database_deletion(self, db_name):
+        """Perform the actual database deletion in background thread"""
+
+        def deletion_worker():
+            credentials = self.controller.db_credentials
+            try:
+                terminate_and_delete_database(credentials, db_name)
+                # Success - update UI on main thread
+                self.after(0, lambda: self.finish_deletion_success(db_name))
+            except Exception as e:
+                # Error - show error message on main thread
+                self.after(0, lambda: self.finish_deletion_error(db_name, str(e)))
+
+        # Start deletion in background thread
+        threading.Thread(target=deletion_worker, daemon=True).start()
+
+    def finish_deletion_success(self, db_name):
+        """Handle successful deletion completion"""
+        messagebox.showinfo(
+            "Deletion Complete", f"Database '{db_name}' has been successfully deleted."
+        )
+        # Refresh the database list to remove the deleted database
+        self.load_databases()
+
+    def finish_deletion_error(self, db_name, error_message):
+        """Handle deletion error"""
+        messagebox.showerror(
+            "Deletion Error", f"Failed to delete database '{db_name}':\n{error_message}"
+        )
