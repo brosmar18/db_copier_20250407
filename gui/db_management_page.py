@@ -34,21 +34,15 @@ class DBManagementPage(ttk.Frame):
         style.configure("Custom.Treeview", font=("Helvetica", 10))
         style.map("Custom.Treeview.Heading", background=[("active", "#7BB837")])
         style.configure(
-            "Custom.Small.TButton",
+            "Refresh.TButton",
             background="#7BB837",
             foreground="white",
-            font=("Helvetica", 8, "bold"),
-            padding=(2, 2),
-        )
-        style.map("Custom.Small.TButton", background=[("active", "#6AA62F")])
-        style.configure(
-            "Delete.TButton",
-            background="#D9534F",
-            foreground="white",
             font=("Helvetica", 10, "bold"),
-            padding=(4, 4),
+            padding=(8, 4),
+            borderwidth=0,
+            relief="flat",
         )
-        style.map("Delete.TButton", background=[("active", "#C9302C")])
+        style.map("Refresh.TButton", background=[("active", "#6AA62F")])
 
         # --- Layout ---
         outer_frame = ttk.Frame(self)
@@ -77,14 +71,8 @@ class DBManagementPage(ttk.Frame):
             left_header,
             text="Refresh",
             command=self.load_databases,
-            style="Custom.Small.TButton",
-        ).pack(side="right", padx=2, pady=2)
-        ttk.Button(
-            left_header,
-            text="Delete",
-            command=self.delete_selected_database,
-            style="Delete.TButton",
-        ).pack(side="right", padx=5, pady=2)
+            style="Refresh.TButton",
+        ).pack(side="right", padx=5, pady=5)
 
         # search
         self.db_search_var = tk.StringVar()
@@ -166,7 +154,7 @@ class DBManagementPage(ttk.Frame):
             header_frame_right,
             text="Refresh",
             command=self.back_to_tables,
-            style="Custom.Small.TButton",
+            style="Refresh.TButton",
         )
         self.back_button.pack(side="right")
         self.back_button.grid_remove()
@@ -312,40 +300,6 @@ class DBManagementPage(ttk.Frame):
         self.details_text.insert(tk.END, ds)
         self.details_text.config(state="disabled")
         self.fields_tree.delete(*self.fields_tree.get_children())
-
-    def delete_selected_database(self):
-        selected = self.db_tree.selection()
-        if not selected:
-            messagebox.showwarning("No Selection", "No database selected for deletion.")
-            return
-
-        db_names = [self.db_tree.item(i)["values"][0] for i in selected]
-        confirm = messagebox.askokcancel(
-            "Confirm Deletion",
-            f"WARNING: This will permanently delete:\n\n{', '.join(db_names)}\n\nThis action cannot be undone.\nProceed?",
-        )
-        if not confirm:
-            return
-
-        def worker():
-            creds = self.controller.db_credentials
-            errors = []
-            for db in db_names:
-                try:
-                    terminate_and_delete_database(creds, db)
-                except Exception as e:
-                    errors.append(f"{db}: {e}")
-            self.after(0, self.load_databases)
-            if errors:
-                self.after(
-                    0, lambda: messagebox.showerror("Deletion Error", "\n".join(errors))
-                )
-            else:
-                self.after(
-                    0, lambda: messagebox.showinfo("Success", "Deleted successfully.")
-                )
-
-        threading.Thread(target=worker, daemon=True).start()
 
     # --- CONTEXT-MENU HANDLERS ---
     def show_db_context_menu(self, event):
@@ -1149,20 +1103,3 @@ class DBManagementPage(ttk.Frame):
                     "Deletion Complete",
                     f"{len(successful_deletions)} databases have been successfully deleted.",
                 )
-
-    def perform_database_deletion(self, db_name):
-        """Perform the actual database deletion in background thread (legacy method for single deletion)"""
-        self.perform_multiple_database_deletion([db_name])
-
-    def finish_deletion_success(self, db_name):
-        """Handle successful deletion completion (legacy method)"""
-        messagebox.showinfo(
-            "Deletion Complete", f"Database '{db_name}' has been successfully deleted."
-        )
-        self.load_databases()
-
-    def finish_deletion_error(self, db_name, error_message):
-        """Handle deletion error (legacy method)"""
-        messagebox.showerror(
-            "Deletion Error", f"Failed to delete database '{db_name}':\n{error_message}"
-        )
