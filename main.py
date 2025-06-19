@@ -95,13 +95,13 @@ class App(tk.Tk):
         btn_frame = ttk.Frame(self.nav_bar, style="Nav.TFrame")
         btn_frame.pack(side="right", padx=20)
 
-        copier_btn = ttk.Button(
-            btn_frame,
-            text="Copier",
-            style="Nav.TButton",
-            command=lambda: self.show_frame("CopierPage"),
-        )
-        copier_btn.pack(side="left", padx=5)
+        # copier_btn = ttk.Button(
+        #     btn_frame,
+        #     text="Copier",
+        #     style="Nav.TButton",
+        #     command=lambda: self.show_frame("CopierPage"),
+        # )
+        # copier_btn.pack(side="left", padx=5)
 
         db_mgmt_btn = ttk.Button(
             btn_frame,

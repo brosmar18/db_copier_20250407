@@ -84,7 +84,7 @@ class LoginPage(ttk.Frame):
         if success:
             self.controller.db_credentials = credentials
             # Directly proceed to the next page.
-            self.controller.show_frame("CopierPage")
+            self.controller.show_frame("DBManagementPage")
         else:
             messagebox.showerror(
                 "Connection Failed", f"Connection Failed:\n{error_msg}"
