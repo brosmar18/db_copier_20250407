@@ -1235,21 +1235,86 @@ class DBManagementPage(ttk.Frame):
                 )
                 return
 
-            # Format the SQL using sqlparse
+            # Format the SQL using sqlparse with enhanced formatting
             formatted_sql = sqlparse.format(
                 current_sql,
                 reindent=True,  # Proper indentation
                 keyword_case="upper",  # SELECT, FROM, WHERE in uppercase
                 identifier_case="lower",  # table_names, column_names in lowercase
                 strip_comments=False,  # Keep -- comments
-                indent_width=2,  # 2-space indentation
-                wrap_after=80,  # Wrap long lines after 80 characters
+                indent_width=4,  # 4-space indentation for better readability
+                wrap_after=60,  # Wrap lines after 60 characters
                 comma_first=False,  # Comma at end of line, not beginning
+                use_space_around_operators=True,  # Spaces around = < > operators
             )
+
+            # Additional custom formatting for SELECT lists
+            lines = formatted_sql.split("\n")
+            formatted_lines = []
+            in_select = False
+            select_items = []
+
+            for line in lines:
+                stripped = line.strip()
+
+                # Detect start of SELECT statement
+                if stripped.upper().startswith("SELECT"):
+                    in_select = True
+                    # Check if SELECT is on same line as columns
+                    if len(stripped) > 6:  # More than just "SELECT"
+                        # Extract the part after SELECT
+                        select_part = stripped[6:].strip()
+                        formatted_lines.append("SELECT")
+                        if select_part:
+                            select_items.append(select_part)
+                    else:
+                        formatted_lines.append("SELECT")
+                    continue
+
+                # Detect end of SELECT clause
+                elif in_select and any(
+                    stripped.upper().startswith(keyword)
+                    for keyword in [
+                        "FROM",
+                        "WHERE",
+                        "GROUP BY",
+                        "HAVING",
+                        "ORDER BY",
+                        "LIMIT",
+                        "UNION",
+                        "JOIN",
+                        "INNER JOIN",
+                        "LEFT JOIN",
+                        "RIGHT JOIN",
+                    ]
+                ):
+                    # Process accumulated SELECT items BEFORE adding the current line
+                    if select_items:
+                        formatted_lines.extend(self._format_select_items(select_items))
+                        select_items = []
+                    in_select = False
+                    formatted_lines.append(line)  # Add the FROM/WHERE/etc line
+                    continue
+
+                # Accumulate SELECT items
+                elif in_select:
+                    if stripped:
+                        select_items.append(stripped)
+                    continue
+
+                else:
+                    formatted_lines.append(line)
+
+            # Handle case where SELECT is at end of query
+            if select_items:
+                formatted_lines.extend(self._format_select_items(select_items))
+
+            # Join back together
+            final_formatted = "\n".join(formatted_lines)
 
             # Replace content with formatted version
             self.sql_text.delete("1.0", tk.END)
-            self.sql_text.insert("1.0", formatted_sql)
+            self.sql_text.insert("1.0", final_formatted)
 
             # Update status
             if hasattr(self, "status_label"):
@@ -1257,6 +1322,26 @@ class DBManagementPage(ttk.Frame):
 
         except Exception as e:
             messagebox.showerror("Format Error", f"Failed to format SQL:\n{str(e)}")
+
+    def _format_select_items(self, items):
+        """Helper method to format SELECT items with proper indentation."""
+        formatted_items = []
+
+        # Join all items and split by comma to handle multi-line cases
+        all_items = " ".join(items)
+        columns = [col.strip() for col in all_items.split(",") if col.strip()]
+
+        for i, column in enumerate(columns):
+            # Clean up the column (remove extra spaces, etc.)
+            column = " ".join(column.split())
+
+            # Add proper indentation and comma
+            if i == len(columns) - 1:  # Last item, no comma
+                formatted_items.append(f"    {column}")
+            else:  # Add comma
+                formatted_items.append(f"    {column},")
+
+        return formatted_items
 
     def show_protection_message(self):
         """Show information about protected databases"""
