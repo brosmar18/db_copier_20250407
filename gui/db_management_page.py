@@ -1019,10 +1019,6 @@ class DBManagementPage(ttk.Frame):
         editor_container.grid_rowconfigure(0, weight=1)
         editor_container.grid_columnconfigure(0, weight=1)
 
-        # Add sample query
-        sample_query = f"-- Sample queries for {db_name}\nSELECT * FROM information_schema.tables WHERE table_schema = 'public';"
-        self.sql_text.insert("1.0", sample_query)
-
         # Button frame
         button_frame = ttk.Frame(main_frame, style="Query.TFrame")
         button_frame.pack(fill="x", pady=(10, 15))
