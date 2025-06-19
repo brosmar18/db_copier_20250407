@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
+import sqlparse
 from db import (
     fetch_databases,
     get_database_details,
@@ -949,6 +950,17 @@ class DBManagementPage(ttk.Frame):
         style.map("QueryClear.TButton", background=[("active", "#4A5568")])
 
         style.configure(
+            "QueryFormat.TButton",
+            background="#805AD5",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryFormat.TButton", background=[("active", "#6B46C1")])
+
+        style.configure(
             "Query.Treeview",
             background="white",
             foreground="black",
@@ -1030,6 +1042,14 @@ class DBManagementPage(ttk.Frame):
             style="QueryExecute.TButton",
         )
         execute_btn.pack(side="left", padx=(0, 10))
+
+        format_btn = ttk.Button(
+            button_frame,
+            text="✨ Format SQL",
+            command=self.format_sql,
+            style="QueryFormat.TButton",
+        )
+        format_btn.pack(side="left", padx=(0, 10))
 
         clear_btn = ttk.Button(
             button_frame,
@@ -1202,6 +1222,41 @@ class DBManagementPage(ttk.Frame):
     def clear_query(self):
         """Clear the SQL editor."""
         self.sql_text.delete("1.0", tk.END)
+
+    def format_sql(self):
+        """Format and beautify the SQL in the editor."""
+        try:
+            # Get current SQL content
+            current_sql = self.sql_text.get("1.0", tk.END).strip()
+
+            if not current_sql:
+                messagebox.showinfo(
+                    "No SQL to Format", "Please enter some SQL code to format."
+                )
+                return
+
+            # Format the SQL using sqlparse
+            formatted_sql = sqlparse.format(
+                current_sql,
+                reindent=True,  # Proper indentation
+                keyword_case="upper",  # SELECT, FROM, WHERE in uppercase
+                identifier_case="lower",  # table_names, column_names in lowercase
+                strip_comments=False,  # Keep -- comments
+                indent_width=2,  # 2-space indentation
+                wrap_after=80,  # Wrap long lines after 80 characters
+                comma_first=False,  # Comma at end of line, not beginning
+            )
+
+            # Replace content with formatted version
+            self.sql_text.delete("1.0", tk.END)
+            self.sql_text.insert("1.0", formatted_sql)
+
+            # Update status
+            if hasattr(self, "status_label"):
+                self.status_label.config(text="SQL formatted successfully!")
+
+        except Exception as e:
+            messagebox.showerror("Format Error", f"Failed to format SQL:\n{str(e)}")
 
     def show_protection_message(self):
         """Show information about protected databases"""
