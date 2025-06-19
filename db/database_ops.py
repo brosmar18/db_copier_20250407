@@ -223,3 +223,109 @@ def rename_database(credentials, old_name, new_name, update_status_callback):
         raise Exception(f"Failed to rename database '{old_name}' to '{new_name}': {e}")
     finally:
         conn.close()
+
+
+def execute_sql_query(credentials, db_name, sql_query):
+    """
+    Execute a SQL query on the specified database and return results.
+
+    Parameters:
+      - credentials: Database connection credentials
+      - db_name: Target database name
+      - sql_query: SQL query to execute
+
+    Returns:
+      - Dictionary with query results, column names, row count, and execution time
+    """
+    import time
+
+    if not sql_query or not sql_query.strip():
+        raise Exception("SQL query cannot be empty")
+
+    # Connect to the target database
+    conn = connect_to_db(credentials, database=db_name)
+    if not conn:
+        raise Exception(f"Unable to connect to database '{db_name}'")
+
+    start_time = time.time()
+
+    try:
+        cur = conn.cursor()
+
+        # Execute the query
+        cur.execute(sql_query.strip())
+
+        execution_time = round(
+            (time.time() - start_time) * 1000, 2
+        )  # Convert to milliseconds
+
+        # Determine query type and handle results accordingly
+        query_type = sql_query.strip().upper().split()[0] if sql_query.strip() else ""
+
+        if query_type in ["SELECT", "WITH", "SHOW", "EXPLAIN", "ANALYZE"]:
+            # Fetch results for SELECT-type queries
+            try:
+                rows = cur.fetchall()
+                columns = (
+                    [desc[0] for desc in cur.description] if cur.description else []
+                )
+                row_count = len(rows)
+
+                result = {
+                    "success": True,
+                    "query_type": "SELECT",
+                    "columns": columns,
+                    "rows": rows,
+                    "row_count": row_count,
+                    "execution_time_ms": execution_time,
+                    "message": f"Query executed successfully. {row_count} rows returned.",
+                }
+            except Exception:
+                # Handle cases where query doesn't return results
+                result = {
+                    "success": True,
+                    "query_type": "SELECT",
+                    "columns": [],
+                    "rows": [],
+                    "row_count": 0,
+                    "execution_time_ms": execution_time,
+                    "message": "Query executed successfully. No results returned.",
+                }
+        else:
+            # Handle modification queries (INSERT, UPDATE, DELETE, etc.)
+            try:
+                affected_rows = cur.rowcount
+                conn.commit()
+
+                result = {
+                    "success": True,
+                    "query_type": "MODIFICATION",
+                    "columns": [],
+                    "rows": [],
+                    "row_count": affected_rows if affected_rows >= 0 else 0,
+                    "execution_time_ms": execution_time,
+                    "message": f"Query executed successfully. {affected_rows if affected_rows >= 0 else 0} rows affected.",
+                }
+            except Exception:
+                conn.rollback()
+                raise
+
+        cur.close()
+        return result
+
+    except Exception as e:
+        execution_time = round((time.time() - start_time) * 1000, 2)
+
+        result = {
+            "success": False,
+            "query_type": "ERROR",
+            "columns": [],
+            "rows": [],
+            "row_count": 0,
+            "execution_time_ms": execution_time,
+            "message": f"Query failed: {str(e)}",
+        }
+        return result
+
+    finally:
+        conn.close()

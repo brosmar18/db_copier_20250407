@@ -10,6 +10,7 @@ from db import (
     terminate_and_delete_database,
     copy_database_logic,
     rename_database,
+    execute_sql_query,
 )
 
 
@@ -361,7 +362,7 @@ class DBManagementPage(ttk.Frame):
         if not bbox:
             return
         x = self.db_tree.winfo_rootx() + bbox[0] + bbox[2] // 2
-        y = self.db_tree.winfo_rooty() + bbox[1] + bbox[3] // 2
+        y = self.winfo_rooty() + bbox[1] + bbox[3] // 2
         try:
             self.db_context_menu.tk_popup(x, y)
         finally:
@@ -385,6 +386,9 @@ class DBManagementPage(ttk.Frame):
                 self.db_context_menu.add_command(
                     label="✏️ Rename DB", command=self.rename_database
                 )
+            self.db_context_menu.add_command(
+                label="🔍 Query DB", command=self.open_query_interface
+            )
             self.db_context_menu.add_separator()
 
             # Only show delete for non-protected databases
@@ -878,6 +882,326 @@ class DBManagementPage(ttk.Frame):
         new_name_entry.focus()
         new_name_entry.select_range(0, tk.END)
         dialog.wait_window()
+
+    def open_query_interface(self):
+        """Open SQL query interface for the selected database."""
+        if not self.context_menu_dbs:
+            return
+
+        if len(self.context_menu_dbs) > 1:
+            messagebox.showwarning(
+                "Query Limitation",
+                "Please select only one database to query.\n"
+                f"Currently selected: {len(self.context_menu_dbs)} databases",
+            )
+            return
+
+        db_name = self.context_menu_dbs[0]
+
+        # Create query interface window
+        query_window = tk.Toplevel(self)
+        query_window.title(f"🔍 SQL Query - {db_name}")
+        query_window.transient(self)
+
+        # Apply color schema
+        query_window.configure(bg="#181F67")
+
+        # Setup custom styles for query interface
+        style = ttk.Style()
+
+        # Query window specific styles
+        style.configure("Query.TFrame", background="#181F67", relief="flat")
+
+        style.configure(
+            "Query.TLabel",
+            background="#181F67",
+            foreground="white",
+            font=("Helvetica", 10),
+        )
+
+        style.configure(
+            "QueryHeader.TLabel",
+            background="#181F67",
+            foreground="white",
+            font=("Helvetica", 12, "bold"),
+        )
+
+        style.configure(
+            "QueryExecute.TButton",
+            background="#38A169",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryExecute.TButton", background=[("active", "#2F855A")])
+
+        style.configure(
+            "QueryClear.TButton",
+            background="#718096",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryClear.TButton", background=[("active", "#4A5568")])
+
+        style.configure(
+            "Query.Treeview",
+            background="white",
+            foreground="black",
+            fieldbackground="white",
+            font=("Helvetica", 9),
+        )
+        style.configure(
+            "Query.Treeview.Heading",
+            background="#181F67",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+        )
+        style.map("Query.Treeview.Heading", background=[("active", "#7BB837")])
+
+        # Main content frame
+        main_frame = ttk.Frame(query_window, style="Query.TFrame")
+        main_frame.pack(fill="both", expand=True, padx=15, pady=15)
+
+        # Header with database name
+        header_frame = ttk.Frame(main_frame, style="Query.TFrame")
+        header_frame.pack(fill="x", pady=(0, 15))
+
+        ttk.Label(
+            header_frame,
+            text=f"SQL Query Interface - Database: {db_name}",
+            style="QueryHeader.TLabel",
+        ).pack(side="left")
+
+        # SQL Editor Section
+        editor_frame = ttk.Frame(main_frame, style="Query.TFrame")
+        editor_frame.pack(fill="x", pady=(0, 10))
+
+        ttk.Label(editor_frame, text="SQL Query:", style="Query.TLabel").pack(
+            anchor="w", pady=(0, 5)
+        )
+
+        # SQL text editor with scrollbar
+        editor_container = ttk.Frame(editor_frame, style="Query.TFrame")
+        editor_container.pack(fill="x")
+
+        self.sql_text = tk.Text(
+            editor_container,
+            height=8,
+            font=("Consolas", 11),
+            bg="white",
+            fg="black",
+            insertbackground="black",
+            selectbackground="#7BB837",
+            selectforeground="white",
+            wrap="none",
+        )
+
+        # Add scrollbars for SQL editor
+        sql_scrollbar_v = ttk.Scrollbar(
+            editor_container, orient="vertical", command=self.sql_text.yview
+        )
+        sql_scrollbar_h = ttk.Scrollbar(
+            editor_container, orient="horizontal", command=self.sql_text.xview
+        )
+        self.sql_text.configure(
+            yscrollcommand=sql_scrollbar_v.set, xscrollcommand=sql_scrollbar_h.set
+        )
+
+        self.sql_text.grid(row=0, column=0, sticky="nsew")
+        sql_scrollbar_v.grid(row=0, column=1, sticky="ns")
+        sql_scrollbar_h.grid(row=1, column=0, sticky="ew")
+
+        editor_container.grid_rowconfigure(0, weight=1)
+        editor_container.grid_columnconfigure(0, weight=1)
+
+        # Button frame
+        button_frame = ttk.Frame(main_frame, style="Query.TFrame")
+        button_frame.pack(fill="x", pady=(10, 15))
+
+        execute_btn = ttk.Button(
+            button_frame,
+            text="▶ Execute Query",
+            command=lambda: self.execute_query(db_name, query_window),
+            style="QueryExecute.TButton",
+        )
+        execute_btn.pack(side="left", padx=(0, 10))
+
+        clear_btn = ttk.Button(
+            button_frame,
+            text="🗑 Clear",
+            command=self.clear_query,
+            style="QueryClear.TButton",
+        )
+        clear_btn.pack(side="left")
+
+        # Results section
+        results_frame = ttk.Frame(main_frame, style="Query.TFrame")
+        results_frame.pack(fill="both", expand=True, pady=(0, 10))
+
+        ttk.Label(results_frame, text="Query Results:", style="Query.TLabel").pack(
+            anchor="w", pady=(0, 5)
+        )
+
+        # Results treeview with scrollbars
+        results_container = ttk.Frame(results_frame, style="Query.TFrame")
+        results_container.pack(fill="both", expand=True)
+
+        self.results_tree = ttk.Treeview(results_container, style="Query.Treeview")
+
+        # Add scrollbars for results
+        results_scrollbar_v = ttk.Scrollbar(
+            results_container, orient="vertical", command=self.results_tree.yview
+        )
+        results_scrollbar_h = ttk.Scrollbar(
+            results_container, orient="horizontal", command=self.results_tree.xview
+        )
+        self.results_tree.configure(
+            yscrollcommand=results_scrollbar_v.set,
+            xscrollcommand=results_scrollbar_h.set,
+        )
+
+        self.results_tree.grid(row=0, column=0, sticky="nsew")
+        results_scrollbar_v.grid(row=0, column=1, sticky="ns")
+        results_scrollbar_h.grid(row=1, column=0, sticky="ew")
+
+        results_container.grid_rowconfigure(0, weight=1)
+        results_container.grid_columnconfigure(0, weight=1)
+
+        # Status bar
+        status_frame = ttk.Frame(main_frame, style="Query.TFrame")
+        status_frame.pack(fill="x")
+
+        self.status_label = ttk.Label(
+            status_frame, text="Ready to execute queries...", style="Query.TLabel"
+        )
+        self.status_label.pack(side="left")
+
+        # Set window size and center it with smooth animation
+        query_window.withdraw()  # Hide initially
+        query_window.update_idletasks()
+
+        # Large size for good data viewing
+        window_width = 1100
+        window_height = 750
+
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (window_width // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (window_height // 2)
+
+        query_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        query_window.minsize(800, 600)  # Minimum size for usability
+        query_window.deiconify()  # Show smoothly
+
+        # Focus on SQL editor
+        self.sql_text.focus()
+
+    def execute_query(self, db_name, query_window):
+        """Execute the SQL query in background thread."""
+        sql_query = self.sql_text.get("1.0", tk.END).strip()
+
+        if not sql_query:
+            messagebox.showwarning(
+                "Empty Query", "Please enter a SQL query to execute."
+            )
+            return
+
+        # Disable execute button during execution
+        for widget in query_window.winfo_children():
+            if isinstance(widget, ttk.Frame):
+                for child in widget.winfo_children():
+                    if isinstance(child, ttk.Button) and "Execute" in child.cget(
+                        "text"
+                    ):
+                        child.config(state="disabled")
+                        break
+
+        self.status_label.config(text="Executing query...")
+
+        def query_worker():
+            credentials = self.controller.db_credentials
+            try:
+                result = execute_sql_query(credentials, db_name, sql_query)
+                query_window.after(
+                    0, lambda: self.display_query_results(result, query_window)
+                )
+            except Exception as e:
+                error_result = {
+                    "success": False,
+                    "message": f"Execution error: {str(e)}",
+                    "execution_time_ms": 0,
+                }
+                query_window.after(
+                    0, lambda: self.display_query_results(error_result, query_window)
+                )
+
+        threading.Thread(target=query_worker, daemon=True).start()
+
+    def display_query_results(self, result, query_window):
+        """Display query results in the treeview."""
+        # Re-enable execute button
+        for widget in query_window.winfo_children():
+            if isinstance(widget, ttk.Frame):
+                for child in widget.winfo_children():
+                    if isinstance(child, ttk.Button) and "Execute" in child.cget(
+                        "text"
+                    ):
+                        child.config(state="normal")
+                        break
+
+        # Clear previous results
+        self.results_tree.delete(*self.results_tree.get_children())
+
+        # Update status
+        if result["success"]:
+            status_text = (
+                f"{result['message']} (Execution time: {result['execution_time_ms']}ms)"
+            )
+        else:
+            status_text = result["message"]
+
+        self.status_label.config(text=status_text)
+
+        if not result["success"]:
+            # Show error in results area
+            self.results_tree["columns"] = ("Error",)
+            self.results_tree["show"] = "headings"
+            self.results_tree.heading("Error", text="Error Message")
+            self.results_tree.column("Error", width=800)
+            self.results_tree.insert("", tk.END, values=(result["message"],))
+            return
+
+        # Display results for successful queries
+        if result["query_type"] == "SELECT" and result["columns"]:
+            # Configure columns
+            self.results_tree["columns"] = result["columns"]
+            self.results_tree["show"] = "headings"
+
+            # Set up column headers and widths
+            for col in result["columns"]:
+                self.results_tree.heading(col, text=col)
+                self.results_tree.column(col, width=150, minwidth=100)
+
+            # Insert data rows
+            for row in result["rows"]:
+                # Convert any None values to empty strings for display
+                display_row = [str(val) if val is not None else "" for val in row]
+                self.results_tree.insert("", tk.END, values=display_row)
+
+        elif result["query_type"] == "MODIFICATION":
+            # Show modification results
+            self.results_tree["columns"] = ("Result",)
+            self.results_tree["show"] = "headings"
+            self.results_tree.heading("Result", text="Query Result")
+            self.results_tree.column("Result", width=800)
+            self.results_tree.insert("", tk.END, values=(result["message"],))
+
+    def clear_query(self):
+        """Clear the SQL editor."""
+        self.sql_text.delete("1.0", tk.END)
 
     def show_protection_message(self):
         """Show information about protected databases"""
