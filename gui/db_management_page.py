@@ -28,6 +28,7 @@ class DBManagementPage(ttk.Frame):
             "template0",
             "template1",
         ]  # System databases to protect
+        self.current_view = "normal"  # Track current view: "normal" or "query"
 
         # --- Styles ---
         style = ttk.Style(self)
@@ -51,6 +52,55 @@ class DBManagementPage(ttk.Frame):
         )
         style.map("Refresh.TButton", background=[("active", "#6AA62F")])
 
+        # Query interface styles
+        style.configure("Query.TFrame", background="white", relief="flat")
+        style.configure(
+            "QueryHeader.TLabel",
+            background="white",
+            foreground="#181F67",
+            font=("Helvetica", 14, "bold"),
+        )
+        style.configure(
+            "QueryExecute.TButton",
+            background="#38A169",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryExecute.TButton", background=[("active", "#2F855A")])
+        style.configure(
+            "QueryClear.TButton",
+            background="#718096",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryClear.TButton", background=[("active", "#4A5568")])
+        style.configure(
+            "QueryFormat.TButton",
+            background="#805AD5",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryFormat.TButton", background=[("active", "#6B46C1")])
+        style.configure(
+            "QueryBack.TButton",
+            background="#E53E3E",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(15, 8),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("QueryBack.TButton", background=[("active", "#C53030")])
+
         # --- Layout ---
         outer_frame = ttk.Frame(self)
         outer_frame.pack(expand=True, fill="both", padx=10, pady=10)
@@ -59,8 +109,8 @@ class DBManagementPage(ttk.Frame):
 
         left_frame = ttk.Frame(content_frame)
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
-        right_frame = ttk.Frame(content_frame)
-        right_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.right_frame = ttk.Frame(content_frame)
+        self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
         content_frame.columnconfigure(0, weight=1)
         content_frame.columnconfigure(1, weight=2)
         content_frame.rowconfigure(0, weight=1)
@@ -121,23 +171,42 @@ class DBManagementPage(ttk.Frame):
         self.db_tree.bind("<App>", self.show_db_context_menu_keyboard)
         self.db_tree.bind("<Shift-F10>", self.show_db_context_menu_keyboard)
 
-        # === RIGHT PANE: DETAILS & TABLES/FIELDS ===
+        # Configure right frame for switching between views
+        self.right_frame.columnconfigure(0, weight=1)
+        self.right_frame.rowconfigure(0, weight=1)
+
+        # Create both views
+        self.create_normal_view()
+        self.create_query_view()
+
+        # Start with normal view
+        self.show_normal_view()
+
+        self.bind("<<ShowFrame>>", lambda e: self.load_databases())
+
+    def create_normal_view(self):
+        """Create the normal view (details, tables, fields)"""
+        self.normal_frame = ttk.Frame(self.right_frame)
+        self.normal_frame.grid(row=0, column=0, sticky="nsew")
+        self.normal_frame.columnconfigure(0, weight=1)
+
+        # === NORMAL VIEW: DETAILS & TABLES/FIELDS ===
         ttk.Label(
-            right_frame,
+            self.normal_frame,
             text="Details",
             font=("Helvetica", 14, "bold"),
             foreground="#181F67",
         ).grid(row=0, column=0, sticky="w")
         self.details_text = tk.Text(
-            right_frame, wrap="word", font=("Helvetica", 10), height=6
+            self.normal_frame, wrap="word", font=("Helvetica", 10), height=6
         )
         self.details_text.grid(row=1, column=0, sticky="nsew", pady=(5, 5))
         self.details_text.config(state="disabled")
-        right_frame.rowconfigure(1, weight=0)
+        self.normal_frame.rowconfigure(1, weight=0)
 
         # Table/field search & header
         self.item_search_var = tk.StringVar()
-        item_search_frame = ttk.Frame(right_frame)
+        item_search_frame = ttk.Frame(self.normal_frame)
         item_search_frame.grid(row=2, column=0, sticky="ew", padx=2, pady=(2, 5))
         ttk.Label(item_search_frame, text="Search:", font=("Helvetica", 10)).pack(
             side="left"
@@ -148,7 +217,7 @@ class DBManagementPage(ttk.Frame):
         self.item_search_entry.pack(side="left", fill="x", expand=True, padx=5)
         self.item_search_entry.bind("<KeyRelease>", self.filter_items)
 
-        header_frame_right = ttk.Frame(right_frame)
+        header_frame_right = ttk.Frame(self.normal_frame)
         header_frame_right.grid(row=3, column=0, sticky="ew")
         self.right_label = ttk.Label(
             header_frame_right,
@@ -167,10 +236,9 @@ class DBManagementPage(ttk.Frame):
         self.back_button.grid_remove()
 
         # Tables/fields trees
-        self.bottom_frame = ttk.Frame(right_frame)
+        self.bottom_frame = ttk.Frame(self.normal_frame)
         self.bottom_frame.grid(row=4, column=0, sticky="nsew", pady=(5, 0))
-        right_frame.rowconfigure(4, weight=1)
-        right_frame.columnconfigure(0, weight=1)
+        self.normal_frame.rowconfigure(4, weight=1)
         self.bottom_frame.columnconfigure(0, weight=1)
         self.bottom_frame.columnconfigure(1, weight=1)
 
@@ -195,7 +263,168 @@ class DBManagementPage(ttk.Frame):
         self.fields_tree.column("Field", anchor="w", width=200)
         self.fields_tree.grid(row=0, column=1, sticky="nsew")
 
-        self.bind("<<ShowFrame>>", lambda e: self.load_databases())
+    def create_query_view(self):
+        """Create the SQL query interface view"""
+        self.query_frame = ttk.Frame(self.right_frame, style="Query.TFrame")
+        self.query_frame.grid(row=0, column=0, sticky="nsew")
+        self.query_frame.columnconfigure(0, weight=1)
+        self.query_frame.rowconfigure(3, weight=1)  # Results section should expand
+
+        # Header with database name and back button
+        header_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header_frame.columnconfigure(1, weight=1)
+
+        self.query_db_label = ttk.Label(
+            header_frame,
+            text="SQL Query Interface",
+            style="QueryHeader.TLabel",
+        )
+        self.query_db_label.grid(row=0, column=0, sticky="w")
+
+        ttk.Button(
+            header_frame,
+            text="← Back to Tables",
+            command=self.show_normal_view,
+            style="QueryBack.TButton",
+        ).grid(row=0, column=2, sticky="e", padx=(10, 0))
+
+        # SQL Editor Section
+        editor_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
+        editor_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        editor_frame.columnconfigure(0, weight=1)
+
+        ttk.Label(editor_frame, text="SQL Query:", font=("Helvetica", 10, "bold")).grid(
+            row=0, column=0, sticky="w", pady=(0, 5)
+        )
+
+        # SQL text editor with scrollbar
+        editor_container = ttk.Frame(editor_frame, style="Query.TFrame")
+        editor_container.grid(row=1, column=0, sticky="ew")
+        editor_container.columnconfigure(0, weight=1)
+
+        self.sql_text = tk.Text(
+            editor_container,
+            height=8,
+            font=("Consolas", 11),
+            bg="white",
+            fg="black",
+            insertbackground="black",
+            selectbackground="#7BB837",
+            selectforeground="white",
+            wrap="none",
+        )
+
+        # Add scrollbars for SQL editor
+        sql_scrollbar_v = ttk.Scrollbar(
+            editor_container, orient="vertical", command=self.sql_text.yview
+        )
+        sql_scrollbar_h = ttk.Scrollbar(
+            editor_container, orient="horizontal", command=self.sql_text.xview
+        )
+        self.sql_text.configure(
+            yscrollcommand=sql_scrollbar_v.set, xscrollcommand=sql_scrollbar_h.set
+        )
+
+        self.sql_text.grid(row=0, column=0, sticky="nsew")
+        sql_scrollbar_v.grid(row=0, column=1, sticky="ns")
+        sql_scrollbar_h.grid(row=1, column=0, sticky="ew")
+
+        editor_container.grid_rowconfigure(0, weight=1)
+
+        # Button frame
+        button_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
+        button_frame.grid(row=2, column=0, sticky="ew", pady=(10, 10))
+
+        ttk.Button(
+            button_frame,
+            text="▶ Execute Query",
+            command=self.execute_query,
+            style="QueryExecute.TButton",
+        ).pack(side="left", padx=(0, 10))
+
+        ttk.Button(
+            button_frame,
+            text="✨ Format SQL",
+            command=self.format_sql,
+            style="QueryFormat.TButton",
+        ).pack(side="left", padx=(0, 10))
+
+        ttk.Button(
+            button_frame,
+            text="🗑 Clear",
+            command=self.clear_query,
+            style="QueryClear.TButton",
+        ).pack(side="left")
+
+        # Results section
+        results_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
+        results_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 10))
+        results_frame.columnconfigure(0, weight=1)
+        results_frame.rowconfigure(1, weight=1)
+
+        ttk.Label(
+            results_frame, text="Query Results:", font=("Helvetica", 10, "bold")
+        ).grid(row=0, column=0, sticky="w", pady=(0, 5))
+
+        # Results treeview with scrollbars
+        results_container = ttk.Frame(results_frame, style="Query.TFrame")
+        results_container.grid(row=1, column=0, sticky="nsew")
+        results_container.columnconfigure(0, weight=1)
+        results_container.rowconfigure(0, weight=1)
+
+        self.results_tree = ttk.Treeview(results_container, style="Custom.Treeview")
+
+        # Add scrollbars for results
+        results_scrollbar_v = ttk.Scrollbar(
+            results_container, orient="vertical", command=self.results_tree.yview
+        )
+        results_scrollbar_h = ttk.Scrollbar(
+            results_container, orient="horizontal", command=self.results_tree.xview
+        )
+        self.results_tree.configure(
+            yscrollcommand=results_scrollbar_v.set,
+            xscrollcommand=results_scrollbar_h.set,
+        )
+
+        self.results_tree.grid(row=0, column=0, sticky="nsew")
+        results_scrollbar_v.grid(row=0, column=1, sticky="ns")
+        results_scrollbar_h.grid(row=1, column=0, sticky="ew")
+
+        # Status bar
+        status_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
+        status_frame.grid(row=4, column=0, sticky="ew")
+
+        self.status_label = ttk.Label(
+            status_frame, text="Ready to execute queries...", font=("Helvetica", 10)
+        )
+        self.status_label.grid(row=0, column=0, sticky="w")
+
+    def show_normal_view(self):
+        """Switch to normal view (tables/details)"""
+        self.current_view = "normal"
+        self.query_frame.grid_remove()
+        self.normal_frame.grid()
+
+    def show_query_view(self, db_name):
+        """Switch to query view for the specified database"""
+        self.current_view = "query"
+        self.query_db_name = db_name
+
+        # Update the header to show which database is being queried
+        self.query_db_label.config(text=f"SQL Query Interface - Database: {db_name}")
+
+        # Clear previous query and results
+        self.sql_text.delete("1.0", tk.END)
+        self.results_tree.delete(*self.results_tree.get_children())
+        self.status_label.config(text="Ready to execute queries...")
+
+        # Switch views
+        self.normal_frame.grid_remove()
+        self.query_frame.grid()
+
+        # Focus on SQL editor
+        self.sql_text.focus()
 
     # --- Database loading/filtering/selection methods ---
     def load_databases(self):
@@ -213,6 +442,10 @@ class DBManagementPage(ttk.Frame):
         self.item_search_var.set("")
         self.item_tree.delete(*self.item_tree.get_children())
         self.fields_tree.delete(*self.fields_tree.get_children())
+
+        # If we're in query view, switch back to normal view
+        if self.current_view == "query":
+            self.show_normal_view()
 
     def clear_details(self):
         self.details_text.config(state="normal")
@@ -233,24 +466,27 @@ class DBManagementPage(ttk.Frame):
             return
         db_name = self.db_tree.item(selected[0])["values"][0]
         self.current_db = db_name
-        creds = self.controller.db_credentials
-        details = get_database_details(creds, db_name) or {}
-        details_str = (
-            "\n".join(f"{k}: {v}" for k, v in details.items())
-            or "No details available."
-        )
-        self.details_text.config(state="normal")
-        self.details_text.delete("1.0", tk.END)
-        self.details_text.insert(tk.END, details_str)
-        self.details_text.config(state="disabled")
 
-        tables = sorted(get_tables_for_database(creds, db_name) or [])
-        self.all_items = tables
-        self.populate_items(tables, header="Table Name")
-        self.right_label.config(text="Tables")
-        self.back_button.grid_remove()
-        self.item_search_var.set("")
-        self.fields_tree.delete(*self.fields_tree.get_children())
+        # Only update details if we're in normal view
+        if self.current_view == "normal":
+            creds = self.controller.db_credentials
+            details = get_database_details(creds, db_name) or {}
+            details_str = (
+                "\n".join(f"{k}: {v}" for k, v in details.items())
+                or "No details available."
+            )
+            self.details_text.config(state="normal")
+            self.details_text.delete("1.0", tk.END)
+            self.details_text.insert(tk.END, details_str)
+            self.details_text.config(state="disabled")
+
+            tables = sorted(get_tables_for_database(creds, db_name) or [])
+            self.all_items = tables
+            self.populate_items(tables, header="Table Name")
+            self.right_label.config(text="Tables")
+            self.back_button.grid_remove()
+            self.item_search_var.set("")
+            self.fields_tree.delete(*self.fields_tree.get_children())
 
     def populate_items(self, items, header="Table Name"):
         self.item_tree.delete(*self.item_tree.get_children())
@@ -885,7 +1121,7 @@ class DBManagementPage(ttk.Frame):
         dialog.wait_window()
 
     def open_query_interface(self):
-        """Open SQL query interface for the selected database."""
+        """Open SQL query interface for the selected database in the right pane."""
         if not self.context_menu_dbs:
             return
 
@@ -898,228 +1134,9 @@ class DBManagementPage(ttk.Frame):
             return
 
         db_name = self.context_menu_dbs[0]
+        self.show_query_view(db_name)
 
-        # Create query interface window
-        query_window = tk.Toplevel(self)
-        query_window.title(f"🔍 SQL Query - {db_name}")
-        query_window.transient(self)
-
-        # Apply color schema
-        query_window.configure(bg="#181F67")
-
-        # Setup custom styles for query interface
-        style = ttk.Style()
-
-        # Query window specific styles
-        style.configure("Query.TFrame", background="#181F67", relief="flat")
-
-        style.configure(
-            "Query.TLabel",
-            background="#181F67",
-            foreground="white",
-            font=("Helvetica", 10),
-        )
-
-        style.configure(
-            "QueryHeader.TLabel",
-            background="#181F67",
-            foreground="white",
-            font=("Helvetica", 12, "bold"),
-        )
-
-        style.configure(
-            "QueryExecute.TButton",
-            background="#38A169",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("QueryExecute.TButton", background=[("active", "#2F855A")])
-
-        style.configure(
-            "QueryClear.TButton",
-            background="#718096",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("QueryClear.TButton", background=[("active", "#4A5568")])
-
-        style.configure(
-            "QueryFormat.TButton",
-            background="#805AD5",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("QueryFormat.TButton", background=[("active", "#6B46C1")])
-
-        style.configure(
-            "Query.Treeview",
-            background="white",
-            foreground="black",
-            fieldbackground="white",
-            font=("Helvetica", 9),
-        )
-        style.configure(
-            "Query.Treeview.Heading",
-            background="#181F67",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-        )
-        style.map("Query.Treeview.Heading", background=[("active", "#7BB837")])
-
-        # Main content frame
-        main_frame = ttk.Frame(query_window, style="Query.TFrame")
-        main_frame.pack(fill="both", expand=True, padx=15, pady=15)
-
-        # Header with database name
-        header_frame = ttk.Frame(main_frame, style="Query.TFrame")
-        header_frame.pack(fill="x", pady=(0, 15))
-
-        ttk.Label(
-            header_frame,
-            text=f"SQL Query Interface - Database: {db_name}",
-            style="QueryHeader.TLabel",
-        ).pack(side="left")
-
-        # SQL Editor Section
-        editor_frame = ttk.Frame(main_frame, style="Query.TFrame")
-        editor_frame.pack(fill="x", pady=(0, 10))
-
-        ttk.Label(editor_frame, text="SQL Query:", style="Query.TLabel").pack(
-            anchor="w", pady=(0, 5)
-        )
-
-        # SQL text editor with scrollbar
-        editor_container = ttk.Frame(editor_frame, style="Query.TFrame")
-        editor_container.pack(fill="x")
-
-        self.sql_text = tk.Text(
-            editor_container,
-            height=8,
-            font=("Consolas", 11),
-            bg="white",
-            fg="black",
-            insertbackground="black",
-            selectbackground="#7BB837",
-            selectforeground="white",
-            wrap="none",
-        )
-
-        # Add scrollbars for SQL editor
-        sql_scrollbar_v = ttk.Scrollbar(
-            editor_container, orient="vertical", command=self.sql_text.yview
-        )
-        sql_scrollbar_h = ttk.Scrollbar(
-            editor_container, orient="horizontal", command=self.sql_text.xview
-        )
-        self.sql_text.configure(
-            yscrollcommand=sql_scrollbar_v.set, xscrollcommand=sql_scrollbar_h.set
-        )
-
-        self.sql_text.grid(row=0, column=0, sticky="nsew")
-        sql_scrollbar_v.grid(row=0, column=1, sticky="ns")
-        sql_scrollbar_h.grid(row=1, column=0, sticky="ew")
-
-        editor_container.grid_rowconfigure(0, weight=1)
-        editor_container.grid_columnconfigure(0, weight=1)
-
-        # Button frame
-        button_frame = ttk.Frame(main_frame, style="Query.TFrame")
-        button_frame.pack(fill="x", pady=(10, 15))
-
-        execute_btn = ttk.Button(
-            button_frame,
-            text="▶ Execute Query",
-            command=lambda: self.execute_query(db_name, query_window),
-            style="QueryExecute.TButton",
-        )
-        execute_btn.pack(side="left", padx=(0, 10))
-
-        format_btn = ttk.Button(
-            button_frame,
-            text="✨ Format SQL",
-            command=self.format_sql,
-            style="QueryFormat.TButton",
-        )
-        format_btn.pack(side="left", padx=(0, 10))
-
-        clear_btn = ttk.Button(
-            button_frame,
-            text="🗑 Clear",
-            command=self.clear_query,
-            style="QueryClear.TButton",
-        )
-        clear_btn.pack(side="left")
-
-        # Results section
-        results_frame = ttk.Frame(main_frame, style="Query.TFrame")
-        results_frame.pack(fill="both", expand=True, pady=(0, 10))
-
-        ttk.Label(results_frame, text="Query Results:", style="Query.TLabel").pack(
-            anchor="w", pady=(0, 5)
-        )
-
-        # Results treeview with scrollbars
-        results_container = ttk.Frame(results_frame, style="Query.TFrame")
-        results_container.pack(fill="both", expand=True)
-
-        self.results_tree = ttk.Treeview(results_container, style="Query.Treeview")
-
-        # Add scrollbars for results
-        results_scrollbar_v = ttk.Scrollbar(
-            results_container, orient="vertical", command=self.results_tree.yview
-        )
-        results_scrollbar_h = ttk.Scrollbar(
-            results_container, orient="horizontal", command=self.results_tree.xview
-        )
-        self.results_tree.configure(
-            yscrollcommand=results_scrollbar_v.set,
-            xscrollcommand=results_scrollbar_h.set,
-        )
-
-        self.results_tree.grid(row=0, column=0, sticky="nsew")
-        results_scrollbar_v.grid(row=0, column=1, sticky="ns")
-        results_scrollbar_h.grid(row=1, column=0, sticky="ew")
-
-        results_container.grid_rowconfigure(0, weight=1)
-        results_container.grid_columnconfigure(0, weight=1)
-
-        # Status bar
-        status_frame = ttk.Frame(main_frame, style="Query.TFrame")
-        status_frame.pack(fill="x")
-
-        self.status_label = ttk.Label(
-            status_frame, text="Ready to execute queries...", style="Query.TLabel"
-        )
-        self.status_label.pack(side="left")
-
-        # Set window size and center it with smooth animation
-        query_window.withdraw()  # Hide initially
-        query_window.update_idletasks()
-
-        # Large size for good data viewing
-        window_width = 1100
-        window_height = 750
-
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (window_width // 2)
-        y = self.winfo_rooty() + (self.winfo_height() // 2) - (window_height // 2)
-
-        query_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
-        query_window.minsize(800, 600)  # Minimum size for usability
-        query_window.deiconify()  # Show smoothly
-
-        # Focus on SQL editor
-        self.sql_text.focus()
-
-    def execute_query(self, db_name, query_window):
+    def execute_query(self):
         """Execute the SQL query in background thread."""
         sql_query = self.sql_text.get("1.0", tk.END).strip()
 
@@ -1129,49 +1146,30 @@ class DBManagementPage(ttk.Frame):
             )
             return
 
-        # Disable execute button during execution
-        for widget in query_window.winfo_children():
-            if isinstance(widget, ttk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, ttk.Button) and "Execute" in child.cget(
-                        "text"
-                    ):
-                        child.config(state="disabled")
-                        break
+        if not hasattr(self, "query_db_name"):
+            messagebox.showerror("No Database", "No database selected for query.")
+            return
 
+        # Update status and disable execute button during execution
         self.status_label.config(text="Executing query...")
 
         def query_worker():
             credentials = self.controller.db_credentials
             try:
-                result = execute_sql_query(credentials, db_name, sql_query)
-                query_window.after(
-                    0, lambda: self.display_query_results(result, query_window)
-                )
+                result = execute_sql_query(credentials, self.query_db_name, sql_query)
+                self.after(0, lambda: self.display_query_results(result))
             except Exception as e:
                 error_result = {
                     "success": False,
                     "message": f"Execution error: {str(e)}",
                     "execution_time_ms": 0,
                 }
-                query_window.after(
-                    0, lambda: self.display_query_results(error_result, query_window)
-                )
+                self.after(0, lambda: self.display_query_results(error_result))
 
         threading.Thread(target=query_worker, daemon=True).start()
 
-    def display_query_results(self, result, query_window):
+    def display_query_results(self, result):
         """Display query results in the treeview."""
-        # Re-enable execute button
-        for widget in query_window.winfo_children():
-            if isinstance(widget, ttk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, ttk.Button) and "Execute" in child.cget(
-                        "text"
-                    ):
-                        child.config(state="normal")
-                        break
-
         # Clear previous results
         self.results_tree.delete(*self.results_tree.get_children())
 
@@ -1317,8 +1315,7 @@ class DBManagementPage(ttk.Frame):
             self.sql_text.insert("1.0", final_formatted)
 
             # Update status
-            if hasattr(self, "status_label"):
-                self.status_label.config(text="SQL formatted successfully!")
+            self.status_label.config(text="SQL formatted successfully!")
 
         except Exception as e:
             messagebox.showerror("Format Error", f"Failed to format SQL:\n{str(e)}")
