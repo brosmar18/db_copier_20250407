@@ -698,6 +698,10 @@ class DBManagementPage(ttk.Frame):
             "Rename.TEntry",
             font=("Helvetica", 10),
             fieldbackground="white",
+            foreground="black",
+            insertcolor="black",  # This makes the cursor visible
+            selectbackground="#7BB837",
+            selectforeground="white",
             borderwidth=1,
             relief="solid",
         )
