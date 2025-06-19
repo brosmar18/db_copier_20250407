@@ -8,6 +8,7 @@ from db import (
     get_columns_for_table,
     get_table_details,
     terminate_and_delete_database,
+    copy_database_logic,
 )
 
 
@@ -382,6 +383,7 @@ class DBManagementPage(ttk.Frame):
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d")
         default_name = f"{self.context_menu_db}_copy_{timestamp}"
+
         dialog = tk.Toplevel(self)
         dialog.title("🔁 Clone Database")
         dialog.transient(self)
@@ -446,9 +448,18 @@ class DBManagementPage(ttk.Frame):
         )
         style.map("DialogCancel.TButton", background=[("active", "#7A7A7A")])
 
+        # Progress bar style
+        style.configure(
+            "Dialog.Horizontal.TProgressbar",
+            troughcolor="#E0E0E0",
+            background="#7BB837",
+            thickness=15,
+        )
+
         # Variables
         name_var = tk.StringVar(value=default_name)
         copies_var = tk.IntVar(value=1)
+        self.clone_in_progress = False
 
         # Main content frame with styled background
         content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=25)
@@ -479,26 +490,89 @@ class DBManagementPage(ttk.Frame):
         )
         copies_spin.grid(row=1, column=1, padx=(0, 10), pady=5, sticky="w")
 
+        # Progress bar (initially hidden)
+        progress_bar = ttk.Progressbar(
+            content_frame, mode="indeterminate", style="Dialog.Horizontal.TProgressbar"
+        )
+        progress_bar.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        progress_bar.grid_remove()
+
+        # Status label (initially hidden)
+        status_label = ttk.Label(content_frame, text="", style="Dialog.TLabel")
+        status_label.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        status_label.grid_remove()
+
         # Button handlers
-        def on_ok():
+        def update_status(message):
+            """Update status label from background thread"""
+            dialog.after(0, lambda: status_label.config(text=message))
+
+        def perform_clone():
+            """Perform the actual cloning operation"""
             new_name = name_var.get().strip() or default_name
             count = copies_var.get()
-            messagebox.showinfo(
-                "Clone Settings",
-                f"Will create {count} copy(ies) of '{self.context_menu_db}'\n"
-                f"with base name: '{new_name}'",
-            )
-            dialog.destroy()
+            credentials = self.controller.db_credentials
+
+            try:
+                for i in range(count):
+                    if count == 1:
+                        current_name = new_name
+                    else:
+                        current_name = f"{new_name}_{i+1:02d}"
+
+                    update_status(
+                        f"Cloning {self.context_menu_db} to {current_name}..."
+                    )
+                    copy_database_logic(
+                        credentials, self.context_menu_db, current_name, update_status
+                    )
+
+                # Success - update UI
+                dialog.after(
+                    0, lambda: self.finish_clone_success(dialog, count, new_name)
+                )
+
+            except Exception as e:
+                # Error - show error message
+                dialog.after(0, lambda: self.finish_clone_error(dialog, str(e)))
+
+        def on_ok():
+            if self.clone_in_progress:
+                return
+
+            new_name = name_var.get().strip() or default_name
+            count = copies_var.get()
+
+            if not new_name:
+                messagebox.showwarning("Input Error", "Please enter a database name.")
+                return
+
+            # Disable buttons and show progress
+            self.clone_in_progress = True
+            ok_btn.config(state="disabled")
+            cancel_btn.config(text="Close", state="disabled")
+            name_entry.config(state="disabled")
+            copies_spin.config(state="disabled")
+
+            progress_bar.grid()
+            progress_bar.start(10)
+            status_label.grid()
+            status_label.config(text="Starting clone operation...")
+
+            # Start cloning in background thread
+            clone_thread = threading.Thread(target=perform_clone, daemon=True)
+            clone_thread.start()
 
         def on_cancel():
-            dialog.destroy()
+            if not self.clone_in_progress:
+                dialog.destroy()
 
         # Buttons with styled frame
         btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
         btn_frame.grid(row=2, column=0, columnspan=2, pady=(25, 15))
 
         ok_btn = ttk.Button(
-            btn_frame, text="OK", command=on_ok, style="DialogOK.TButton"
+            btn_frame, text="Clone Database", command=on_ok, style="DialogOK.TButton"
         )
         ok_btn.pack(side="left", padx=15)
 
@@ -508,8 +582,8 @@ class DBManagementPage(ttk.Frame):
         cancel_btn.pack(side="right", padx=15)
 
         # Set minimum size and center the dialog
-        dialog.minsize(500, 250)
-        dialog.geometry("500x250")
+        dialog.minsize(500, 280)
+        dialog.geometry("500x280")
 
         # Center dialog on parent window
         dialog.update_idletasks()
@@ -524,3 +598,25 @@ class DBManagementPage(ttk.Frame):
         # Focus and wait
         name_entry.focus()
         dialog.wait_window()
+
+    def finish_clone_success(self, dialog, count, base_name):
+        """Handle successful clone completion"""
+        self.clone_in_progress = False
+        if count == 1:
+            message = f"Database '{base_name}' cloned successfully!"
+        else:
+            message = f"{count} database copies created successfully with base name '{base_name}'!"
+
+        messagebox.showinfo("Clone Complete", message)
+        dialog.destroy()
+
+        # Refresh the database list to show the new databases
+        self.load_databases()
+
+    def finish_clone_error(self, dialog, error_message):
+        """Handle clone operation error"""
+        self.clone_in_progress = False
+        messagebox.showerror(
+            "Clone Error", f"Failed to clone database:\n{error_message}"
+        )
+        dialog.destroy()
