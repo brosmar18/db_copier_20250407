@@ -98,7 +98,15 @@ def get_database_details(credentials, db_name):
 def terminate_and_delete_database(credentials, db_name):
     """
     Terminates all sessions for the specified database and then deletes it.
+    Includes safety protection for critical system databases.
     """
+    # Safety check - prevent deletion of critical system databases
+    protected_databases = ["postgres", "template0", "template1"]
+    if db_name.lower() in [db.lower() for db in protected_databases]:
+        raise Exception(
+            f"Cannot delete system database '{db_name}'. This database is protected for system stability."
+        )
+
     conn = connect_to_db(credentials, database="postgres")
     if not conn:
         raise Exception("Unable to connect to database")
@@ -126,6 +134,7 @@ def terminate_and_delete_database(credentials, db_name):
 def rename_database(credentials, old_name, new_name, update_status_callback):
     """
     Rename a database by terminating connections and using ALTER DATABASE.
+    Includes safety protection for critical system databases.
 
     Parameters:
       - credentials: Database connection credentials
@@ -133,6 +142,13 @@ def rename_database(credentials, old_name, new_name, update_status_callback):
       - new_name: New database name
       - update_status_callback: Callback function to update UI status
     """
+    # Safety check - prevent renaming of critical system databases
+    protected_databases = ["postgres", "template0", "template1"]
+    if old_name.lower() in [db.lower() for db in protected_databases]:
+        raise Exception(
+            f"Cannot rename system database '{old_name}'. This database is protected for system stability."
+        )
+
     # Validate new name
     if not new_name or not new_name.strip():
         raise Exception("New database name cannot be empty")
@@ -147,6 +163,12 @@ def rename_database(credentials, old_name, new_name, update_status_callback):
     existing_databases = fetch_databases(credentials)
     if new_name.lower() in [db.lower() for db in existing_databases]:
         raise Exception(f"Database '{new_name}' already exists")
+
+    # Check if new name would conflict with protected databases
+    if new_name.lower() in [db.lower() for db in protected_databases]:
+        raise Exception(
+            f"Cannot use '{new_name}' as it conflicts with a protected system database name."
+        )
 
     # Validate database name (PostgreSQL naming rules)
     import re
