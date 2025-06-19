@@ -492,26 +492,26 @@ class DBManagementPage(ttk.Frame):
         # Dialog OK button style (green)
         style.configure(
             "DialogOK.TButton",
-            background="#7BB837",
+            background="#38A169",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(10, 5),
+            font=("Helvetica", 11, "bold"),
+            padding=(20, 10),
             borderwidth=0,
             relief="flat",
         )
-        style.map("DialogOK.TButton", background=[("active", "#6AA62F")])
+        style.map("DialogOK.TButton", background=[("active", "#2F855A")])
 
         # Dialog Cancel button style (gray)
         style.configure(
             "DialogCancel.TButton",
-            background="#939498",
+            background="#718096",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(10, 5),
+            font=("Helvetica", 11, "bold"),
+            padding=(20, 10),
             borderwidth=0,
             relief="flat",
         )
-        style.map("DialogCancel.TButton", background=[("active", "#7A7A7A")])
+        style.map("DialogCancel.TButton", background=[("active", "#4A5568")])
 
         # Progress bar style
         style.configure(
@@ -527,7 +527,7 @@ class DBManagementPage(ttk.Frame):
         self.clone_in_progress = False
 
         # Main content frame with styled background
-        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=25)
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=35)
         content_frame.pack(fill="both", expand=True)
 
         # Configure grid weights for proper expansion
@@ -535,15 +535,15 @@ class DBManagementPage(ttk.Frame):
 
         # Layout with styled widgets
         ttk.Label(content_frame, text="New Database Name:", style="Dialog.TLabel").grid(
-            row=0, column=0, padx=(0, 10), pady=(10, 5), sticky="w"
+            row=0, column=0, padx=(0, 15), pady=(15, 8), sticky="w"
         )
         name_entry = ttk.Entry(
             content_frame, textvariable=name_var, width=35, style="Dialog.TEntry"
         )
-        name_entry.grid(row=0, column=1, padx=(0, 10), pady=(10, 5), sticky="ew")
+        name_entry.grid(row=0, column=1, padx=(0, 15), pady=(15, 8), sticky="ew")
 
         ttk.Label(content_frame, text="Number of Copies:", style="Dialog.TLabel").grid(
-            row=1, column=0, padx=(0, 10), pady=5, sticky="w"
+            row=1, column=0, padx=(0, 15), pady=(8, 15), sticky="w"
         )
         copies_spin = ttk.Spinbox(
             content_frame,
@@ -553,7 +553,7 @@ class DBManagementPage(ttk.Frame):
             width=5,
             style="Dialog.TSpinbox",
         )
-        copies_spin.grid(row=1, column=1, padx=(0, 10), pady=5, sticky="w")
+        copies_spin.grid(row=1, column=1, padx=(0, 15), pady=(8, 15), sticky="w")
 
         # Progress bar (initially hidden)
         progress_bar = ttk.Progressbar(
@@ -632,10 +632,10 @@ class DBManagementPage(ttk.Frame):
 
         # Buttons with styled frame
         btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(25, 15))
+        btn_frame.grid(row=2, column=0, columnspan=2, pady=(30, 15))
 
         ok_btn = ttk.Button(
-            btn_frame, text="Clone Database", command=on_ok, style="DialogOK.TButton"
+            btn_frame, text="Clone", command=on_ok, style="DialogOK.TButton"
         )
         ok_btn.pack(side="left", padx=15)
 
@@ -644,19 +644,13 @@ class DBManagementPage(ttk.Frame):
         )
         cancel_btn.pack(side="right", padx=15)
 
-        # Set minimum size and center the dialog
-        dialog.minsize(500, 280)
-        dialog.geometry("500x280")
-
-        # Center dialog on parent window
+        # Set size and center the dialog with smooth animation
+        dialog.withdraw()  # Hide dialog initially
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
-        y = (
-            self.winfo_rooty()
-            + (self.winfo_height() // 2)
-            - (dialog.winfo_height() // 2)
-        )
-        dialog.geometry(f"+{x}+{y}")
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (480 // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (300 // 2)
+        dialog.geometry(f"480x300+{x}+{y}")
+        dialog.deiconify()  # Show dialog smoothly
 
         # Focus and wait
         name_entry.focus()
@@ -726,26 +720,26 @@ class DBManagementPage(ttk.Frame):
         # Dialog OK button style (green)
         style.configure(
             "RenameOK.TButton",
-            background="#7BB837",
+            background="#38A169",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(10, 5),
+            font=("Helvetica", 11, "bold"),
+            padding=(20, 10),
             borderwidth=0,
             relief="flat",
         )
-        style.map("RenameOK.TButton", background=[("active", "#6AA62F")])
+        style.map("RenameOK.TButton", background=[("active", "#2F855A")])
 
         # Dialog Cancel button style (gray)
         style.configure(
             "RenameCancel.TButton",
-            background="#939498",
+            background="#718096",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(10, 5),
+            font=("Helvetica", 11, "bold"),
+            padding=(20, 10),
             borderwidth=0,
             relief="flat",
         )
-        style.map("RenameCancel.TButton", background=[("active", "#7A7A7A")])
+        style.map("RenameCancel.TButton", background=[("active", "#4A5568")])
 
         # Progress bar style
         style.configure(
@@ -760,7 +754,7 @@ class DBManagementPage(ttk.Frame):
         self.rename_in_progress = False
 
         # Main content frame with styled background
-        content_frame = ttk.Frame(dialog, style="Rename.TFrame", padding=25)
+        content_frame = ttk.Frame(dialog, style="Rename.TFrame", padding=35)
         content_frame.pack(fill="both", expand=True)
 
         # Configure grid weights for proper expansion
@@ -768,23 +762,23 @@ class DBManagementPage(ttk.Frame):
 
         # Current database name (read-only)
         ttk.Label(content_frame, text="Current Name:", style="Rename.TLabel").grid(
-            row=0, column=0, padx=(0, 10), pady=(10, 5), sticky="w"
+            row=0, column=0, padx=(0, 15), pady=(15, 8), sticky="w"
         )
         current_name_entry = ttk.Entry(content_frame, width=35, style="Rename.TEntry")
         current_name_entry.insert(0, source_db)
         current_name_entry.config(state="readonly")
         current_name_entry.grid(
-            row=0, column=1, padx=(0, 10), pady=(10, 5), sticky="ew"
+            row=0, column=1, padx=(0, 15), pady=(15, 8), sticky="ew"
         )
 
         # New database name entry
         ttk.Label(content_frame, text="New Name:", style="Rename.TLabel").grid(
-            row=1, column=0, padx=(0, 10), pady=(10, 5), sticky="w"
+            row=1, column=0, padx=(0, 15), pady=(8, 15), sticky="w"
         )
         new_name_entry = ttk.Entry(
             content_frame, textvariable=new_name_var, width=35, style="Rename.TEntry"
         )
-        new_name_entry.grid(row=1, column=1, padx=(0, 10), pady=(10, 5), sticky="ew")
+        new_name_entry.grid(row=1, column=1, padx=(0, 15), pady=(8, 15), sticky="ew")
 
         # Progress bar (initially hidden)
         progress_bar = ttk.Progressbar(
@@ -860,13 +854,10 @@ class DBManagementPage(ttk.Frame):
 
         # Buttons with styled frame
         btn_frame = ttk.Frame(content_frame, style="Rename.TFrame")
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(25, 15))
+        btn_frame.grid(row=2, column=0, columnspan=2, pady=(30, 15))
 
         rename_btn = ttk.Button(
-            btn_frame,
-            text="Rename Database",
-            command=on_rename,
-            style="RenameOK.TButton",
+            btn_frame, text="Rename", command=on_rename, style="RenameOK.TButton"
         )
         rename_btn.pack(side="left", padx=15)
 
@@ -875,19 +866,13 @@ class DBManagementPage(ttk.Frame):
         )
         cancel_btn.pack(side="right", padx=15)
 
-        # Set minimum size and center the dialog
-        dialog.minsize(500, 280)
-        dialog.geometry("500x280")
-
-        # Center dialog on parent window
+        # Set size and center the dialog with smooth animation
+        dialog.withdraw()  # Hide dialog initially
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
-        y = (
-            self.winfo_rooty()
-            + (self.winfo_height() // 2)
-            - (dialog.winfo_height() // 2)
-        )
-        dialog.geometry(f"+{x}+{y}")
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (480 // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (320 // 2)
+        dialog.geometry(f"480x320+{x}+{y}")
+        dialog.deiconify()  # Show dialog smoothly
 
         # Focus on new name entry and select all text for easy editing
         new_name_entry.focus()
