@@ -1,9 +1,13 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
+# (ignore __pycache__/ at any depth, and all .pyc/.pyo/.pyd files)
+**/__pycache__/
+**/*.py[cod]
 *$py.class
 
-# Virtual environment
+# C extensions
+*.so
+
+# Virtual environments
 venv/
 env/
 *.venv
@@ -13,9 +17,20 @@ build/
 dist/
 *.spec
 
+# Distribution / packaging
+*.egg-info/
+*.egg
+*.whl
+
 # Log files
 *.log
 *.txt
+
+# Cache files
+.mypy_cache/
+.pyre/
+.coverage
+htmlcov/
 
 # IDE and editor settings
 .vscode/
@@ -27,12 +42,12 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Ignore database backups or test files (if any)
+# Databases, backups, temporary files
 *.sqlite3
 *.db
 *.bak
 *.tmp
 
-# Ignore Inno Setup installer files (if you create an installer)
+# Inno Setup installer files (if you create an installer)
 *.iss
 *.exe

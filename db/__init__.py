@@ -5,6 +5,7 @@ from .database_ops import (
     get_database_details,
     terminate_and_delete_database,
     rename_database,
+    execute_sql_query,
 )
 from .table_ops import get_tables_for_database, get_columns_for_table, get_table_details
 from .restore_ops import create_database, restore_database
