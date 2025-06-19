@@ -215,19 +215,34 @@ class DBManagementPage(ttk.Frame):
             font=("Segoe UI", 11, "bold"),
         )
 
-        # --- Layout ---
+        # PanedWindow styles for professional appearance
+        style.configure(
+            "TPanedwindow", background="#E8E8E8", relief="flat", borderwidth=0
+        )
+        style.configure(
+            "Sash", sashthickness=6, background="#BDC3C7", relief="flat", borderwidth=0
+        )
+
+        # --- Layout with Resizable Panels ---
         outer_frame = ttk.Frame(self)
         outer_frame.pack(expand=True, fill="both", padx=15, pady=15)
-        content_frame = ttk.Frame(outer_frame)
-        content_frame.pack(expand=True, fill="both")
 
-        left_frame = ttk.Frame(content_frame)
-        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        self.right_frame = ttk.Frame(content_frame)
-        self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-        content_frame.columnconfigure(0, weight=1)
-        content_frame.columnconfigure(1, weight=2)
-        content_frame.rowconfigure(0, weight=1)
+        # Create PanedWindow for resizable panels
+        self.main_paned = ttk.PanedWindow(outer_frame, orient="horizontal")
+        self.main_paned.pack(expand=True, fill="both")
+
+        # Create left and right frames with minimum widths
+        left_frame = ttk.Frame(self.main_paned)
+        left_frame.config(width=300)  # Set minimum width for database panel
+        self.right_frame = ttk.Frame(self.main_paned)
+        self.right_frame.config(width=600)  # Set minimum width for content panel
+
+        # Add frames to paned window with weight distribution
+        self.main_paned.add(left_frame, weight=1)
+        self.main_paned.add(self.right_frame, weight=2)
+
+        # Set initial sash position (30% left, 70% right for typical 1200px width)
+        self.after_idle(lambda: self.main_paned.sashpos(0, 350))
 
         # --- LEFT PANE: DATABASES ---
         left_header = ttk.Frame(left_frame)
@@ -313,23 +328,22 @@ class DBManagementPage(ttk.Frame):
         self.db_tree.bind("<App>", self.show_db_context_menu_keyboard)
         self.db_tree.bind("<Shift-F10>", self.show_db_context_menu_keyboard)
 
-        # Configure right frame for switching between views
-        self.right_frame.columnconfigure(0, weight=1)
-        self.right_frame.rowconfigure(0, weight=1)
+        # Configure right frame for switching between views - removed pack_propagate restriction
+        # The PanedWindow will handle the sizing constraints
 
         # Create both views
         self.create_normal_view()
         self.create_query_view()
 
-        # Start with normal view
-        self.show_normal_view()
+        # Start with normal view - ensure query frame is hidden initially
+        self.query_frame.pack_forget()
 
         self.bind("<<ShowFrame>>", lambda e: self.load_databases())
 
     def create_normal_view(self):
         """Create the normal view (details, tables, fields)"""
         self.normal_frame = ttk.Frame(self.right_frame)
-        self.normal_frame.grid(row=0, column=0, sticky="nsew")
+        self.normal_frame.pack(fill="both", expand=True)
         self.normal_frame.columnconfigure(0, weight=1)
 
         # === NORMAL VIEW: DETAILS & TABLES/FIELDS ===
@@ -451,7 +465,7 @@ class DBManagementPage(ttk.Frame):
     def create_query_view(self):
         """Create the SQL query interface view with tabs for Query and History"""
         self.query_frame = ttk.Frame(self.right_frame, style="Query.TFrame")
-        self.query_frame.grid(row=0, column=0, sticky="nsew")
+        self.query_frame.pack(fill="both", expand=True)
         self.query_frame.columnconfigure(0, weight=1)
         self.query_frame.rowconfigure(1, weight=1)  # Notebook should expand
 
@@ -716,8 +730,8 @@ class DBManagementPage(ttk.Frame):
     def show_normal_view(self):
         """Switch to normal view (tables/details)"""
         self.current_view = "normal"
-        self.query_frame.grid_remove()
-        self.normal_frame.grid()
+        self.query_frame.pack_forget()
+        self.normal_frame.pack(fill="both", expand=True)
 
     def show_query_view(self, db_name):
         """Switch to query view for the specified database"""
@@ -736,8 +750,8 @@ class DBManagementPage(ttk.Frame):
         self.load_query_history()
 
         # Switch views
-        self.normal_frame.grid_remove()
-        self.query_frame.grid()
+        self.normal_frame.pack_forget()
+        self.query_frame.pack(fill="both", expand=True)
 
         # Focus on SQL editor
         self.sql_text.focus()
