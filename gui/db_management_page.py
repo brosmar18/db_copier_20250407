@@ -21,6 +21,11 @@ class DBManagementPage(ttk.Frame):
         self.all_databases = []
         self.all_items = []
         self.context_menu_dbs = []  # Changed to support multiple selections
+        self.protected_databases = [
+            "postgres",
+            "template0",
+            "template1",
+        ]  # System databases to protect
 
         # --- Styles ---
         style = ttk.Style(self)
@@ -301,6 +306,18 @@ class DBManagementPage(ttk.Frame):
         self.details_text.config(state="disabled")
         self.fields_tree.delete(*self.fields_tree.get_children())
 
+    def is_protected_database(self, db_name):
+        """Check if a database is protected from deletion"""
+        return db_name.lower() in [db.lower() for db in self.protected_databases]
+
+    def get_deletable_databases(self, db_names):
+        """Filter out protected databases from a list"""
+        return [db for db in db_names if not self.is_protected_database(db)]
+
+    def get_protected_databases(self, db_names):
+        """Get only protected databases from a list"""
+        return [db for db in db_names if self.is_protected_database(db)]
+
     # --- CONTEXT-MENU HANDLERS ---
     def show_db_context_menu(self, event):
         item = self.db_tree.identify_row(event.y)
@@ -355,25 +372,61 @@ class DBManagementPage(ttk.Frame):
         # Clear existing menu
         self.db_context_menu.delete(0, "end")
 
+        # Check if any selected databases are deletable
+        deletable_dbs = self.get_deletable_databases(self.context_menu_dbs)
+        protected_dbs = self.get_protected_databases(self.context_menu_dbs)
+
         if count == 1:
             self.db_context_menu.add_command(
                 label="🔁 Clone DB", command=self.clone_database
             )
-            self.db_context_menu.add_command(
-                label="✏️ Rename DB", command=self.rename_database
-            )
+            # Only show rename for non-protected databases
+            if not self.is_protected_database(self.context_menu_dbs[0]):
+                self.db_context_menu.add_command(
+                    label="✏️ Rename DB", command=self.rename_database
+                )
             self.db_context_menu.add_separator()
-            self.db_context_menu.add_command(
-                label="🗑️ Delete DB", command=self.delete_database_from_context
-            )
+
+            # Only show delete for non-protected databases
+            if not self.is_protected_database(self.context_menu_dbs[0]):
+                self.db_context_menu.add_command(
+                    label="🗑️ Delete DB", command=self.delete_database_from_context
+                )
+            else:
+                self.db_context_menu.add_command(
+                    label="🔒 System DB (Protected)",
+                    command=self.show_protection_message,
+                )
         else:
             self.db_context_menu.add_command(
                 label="🔁 Clone DB", command=self.clone_database
             )
             self.db_context_menu.add_separator()
-            self.db_context_menu.add_command(
-                label=f"🗑️ Delete {count} DBs", command=self.delete_database_from_context
-            )
+
+            # Show delete option only if there are deletable databases
+            if deletable_dbs:
+                if protected_dbs:
+                    # Some protected, some deletable
+                    self.db_context_menu.add_command(
+                        label=f"🗑️ Delete {len(deletable_dbs)} DBs",
+                        command=self.delete_database_from_context,
+                    )
+                    self.db_context_menu.add_command(
+                        label=f"🔒 {len(protected_dbs)} Protected",
+                        command=self.show_protection_message,
+                    )
+                else:
+                    # All deletable
+                    self.db_context_menu.add_command(
+                        label=f"🗑️ Delete {count} DBs",
+                        command=self.delete_database_from_context,
+                    )
+            else:
+                # All protected
+                self.db_context_menu.add_command(
+                    label=f"🔒 All {count} DBs Protected",
+                    command=self.show_protection_message,
+                )
 
     def clone_database(self):
         """Open dialog for naming and quantity of cloned DBs."""
@@ -625,6 +678,16 @@ class DBManagementPage(ttk.Frame):
 
         source_db = self.context_menu_dbs[0]
 
+        # Check if database is protected
+        if self.is_protected_database(source_db):
+            messagebox.showwarning(
+                "Protected Database",
+                f"Cannot rename '{source_db}' because it is a protected system database.\n\n"
+                "System databases (postgres, template0, template1) are critical for "
+                "PostgreSQL operation and cannot be renamed.",
+            )
+            return
+
         dialog = tk.Toplevel(self)
         dialog.title("✏️ Rename Database")
         dialog.transient(self)
@@ -831,6 +894,16 @@ class DBManagementPage(ttk.Frame):
         new_name_entry.select_range(0, tk.END)
         dialog.wait_window()
 
+    def show_protection_message(self):
+        """Show information about protected databases"""
+        protected_list = ", ".join(self.get_protected_databases(self.context_menu_dbs))
+        messagebox.showinfo(
+            "Protected System Databases",
+            f"The following databases are protected from modification:\n\n{protected_list}\n\n"
+            "These are critical system databases required for PostgreSQL to function properly. "
+            "They cannot be deleted, renamed, or modified to ensure system stability.",
+        )
+
     def finish_clone_success(self, dialog, count, base_name):
         """Handle successful clone completion"""
         self.clone_in_progress = False
@@ -875,9 +948,34 @@ class DBManagementPage(ttk.Frame):
 
     def delete_database_from_context(self):
         """Delete selected databases from context menu with styled confirmation dialog"""
-        db_names = self.context_menu_dbs
-        if not db_names:
+        all_selected_dbs = self.context_menu_dbs
+        if not all_selected_dbs:
             return
+
+        # Filter out protected databases
+        deletable_dbs = self.get_deletable_databases(all_selected_dbs)
+        protected_dbs = self.get_protected_databases(all_selected_dbs)
+
+        # If no databases can be deleted, show protection message
+        if not deletable_dbs:
+            self.show_protection_message()
+            return
+
+        # If some databases are protected, show warning about what will be deleted
+        if protected_dbs:
+            protected_list = ", ".join(protected_dbs)
+            warning_result = messagebox.showwarning(
+                "Protected Databases Detected",
+                f"The following protected databases will be skipped:\n{protected_list}\n\n"
+                f"Only {len(deletable_dbs)} database(s) will be deleted:\n{', '.join(deletable_dbs)}\n\n"
+                "Do you want to continue with deleting the non-protected databases?",
+                type=messagebox.OKCANCEL,
+            )
+            if warning_result != "ok":
+                return
+
+        # Use only deletable databases for the deletion dialog
+        db_names = deletable_dbs
 
         # Create custom confirmation dialog
         dialog = tk.Toplevel(self)
@@ -921,89 +1019,81 @@ class DBManagementPage(ttk.Frame):
         # Dialog Delete button style (red)
         style.configure(
             "DialogDelete.TButton",
-            background="#D9534F",
+            background="#E53E3E",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
+            font=("Helvetica", 11, "bold"),
+            padding=(20, 10),
             borderwidth=0,
             relief="flat",
         )
-        style.map("DialogDelete.TButton", background=[("active", "#C9302C")])
+        style.map("DialogDelete.TButton", background=[("active", "#C53030")])
 
         # Dialog Cancel button style (gray)
         style.configure(
             "DialogCancelWarning.TButton",
-            background="#939498",
+            background="#718096",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
+            font=("Helvetica", 11, "bold"),
+            padding=(20, 10),
             borderwidth=0,
             relief="flat",
         )
-        style.map("DialogCancelWarning.TButton", background=[("active", "#7A7A7A")])
+        style.map("DialogCancelWarning.TButton", background=[("active", "#4A5568")])
 
         # Main content frame with styled background
-        content_frame = ttk.Frame(dialog, style="Warning.TFrame", padding=30)
+        content_frame = ttk.Frame(dialog, style="Warning.TFrame", padding=35)
         content_frame.pack(fill="both", expand=True)
 
         # Warning icon and header
         if len(db_names) == 1:
-            header_text = "⚠️ CRITICAL WARNING"
+            header_text = "⚠️ Delete Database"
             warning_text = (
-                "You are about to permanently delete the following database:\n\n"
-                "This action will:\n"
-                "• Terminate all active connections\n"
-                "• Permanently delete all data\n"
-                "• Cannot be undone\n\n"
-                "Are you absolutely sure you want to proceed?"
+                "This will permanently delete the database and all its data.\n"
+                "This action cannot be undone."
             )
         else:
-            header_text = "⚠️ CRITICAL WARNING - MULTIPLE DATABASES"
+            header_text = f"⚠️ Delete {len(db_names)} Databases"
             warning_text = (
-                f"You are about to permanently delete {len(db_names)} databases:\n\n"
-                "This action will:\n"
-                "• Terminate all active connections for each database\n"
-                "• Permanently delete all data in each database\n"
-                "• Cannot be undone\n\n"
-                "Are you absolutely sure you want to proceed?"
+                f"This will permanently delete {len(db_names)} databases and all their data.\n"
+                "This action cannot be undone."
             )
 
         ttk.Label(content_frame, text=header_text, style="WarningHeader.TLabel").pack(
-            pady=(0, 15)
+            pady=(0, 20)
         )
-
-        # Warning message
-        ttk.Label(
-            content_frame, text=warning_text, style="Warning.TLabel", justify="center"
-        ).pack(pady=(0, 10))
 
         # Database names highlight
         if len(db_names) == 1:
             ttk.Label(
                 content_frame, text=f'"{db_names[0]}"', style="DatabaseName.TLabel"
-            ).pack(pady=(0, 20))
+            ).pack(pady=(0, 15))
         else:
             # Create a frame for multiple database names
             db_frame = ttk.Frame(content_frame, style="Warning.TFrame")
-            db_frame.pack(pady=(0, 20))
+            db_frame.pack(pady=(0, 15))
 
-            # Show database names in columns if many, otherwise in a list
-            if len(db_names) <= 5:
+            # Show database names in a more compact way
+            if len(db_names) <= 3:
                 for db_name in db_names:
                     ttk.Label(
-                        db_frame, text=f'• "{db_name}"', style="DatabaseName.TLabel"
+                        db_frame, text=f'"{db_name}"', style="DatabaseName.TLabel"
                     ).pack()
             else:
-                # For many databases, show first few and count
-                for db_name in db_names[:3]:
+                # For many databases, show first 2 and count
+                for db_name in db_names[:2]:
                     ttk.Label(
-                        db_frame, text=f'• "{db_name}"', style="DatabaseName.TLabel"
+                        db_frame, text=f'"{db_name}"', style="DatabaseName.TLabel"
                     ).pack()
                 ttk.Label(
                     db_frame,
-                    text=f"... and {len(db_names) - 3} more databases",
+                    text=f"+ {len(db_names) - 2} more...",
                     style="DatabaseName.TLabel",
                 ).pack()
+
+        # Warning message
+        ttk.Label(
+            content_frame, text=warning_text, style="Warning.TLabel", justify="center"
+        ).pack(pady=(0, 25))
 
         # Button handlers
         def on_delete():
@@ -1015,17 +1105,17 @@ class DBManagementPage(ttk.Frame):
 
         # Buttons with styled frame
         btn_frame = ttk.Frame(content_frame, style="Warning.TFrame")
-        btn_frame.pack(pady=(20, 0))
+        btn_frame.pack(pady=(15, 0))
 
         if len(db_names) == 1:
-            delete_text = "DELETE DATABASE"
+            delete_text = "Delete"
         else:
-            delete_text = f"DELETE {len(db_names)} DATABASES"
+            delete_text = f"Delete All ({len(db_names)})"
 
         delete_btn = ttk.Button(
             btn_frame, text=delete_text, command=on_delete, style="DialogDelete.TButton"
         )
-        delete_btn.pack(side="left", padx=20)
+        delete_btn.pack(side="left", padx=15)
 
         cancel_btn = ttk.Button(
             btn_frame,
@@ -1033,22 +1123,19 @@ class DBManagementPage(ttk.Frame):
             command=on_cancel,
             style="DialogCancelWarning.TButton",
         )
-        cancel_btn.pack(side="right", padx=20)
+        cancel_btn.pack(side="right", padx=15)
 
         # Set minimum size and center the dialog
-        min_height = 350 if len(db_names) <= 5 else 400
-        dialog.minsize(450, min_height)
-        dialog.geometry(f"450x{min_height}")
+        min_height = 280 if len(db_names) <= 3 else 320
+        dialog.minsize(420, min_height)
 
-        # Center dialog on parent window
+        # Center dialog on parent window BEFORE showing content
+        dialog.withdraw()  # Hide dialog initially
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
-        y = (
-            self.winfo_rooty()
-            + (self.winfo_height() // 2)
-            - (dialog.winfo_height() // 2)
-        )
-        dialog.geometry(f"+{x}+{y}")
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (420 // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (min_height // 2)
+        dialog.geometry(f"420x{min_height}+{x}+{y}")
+        dialog.deiconify()  # Show dialog smoothly
 
         # Focus on cancel button by default (safer)
         cancel_btn.focus()
