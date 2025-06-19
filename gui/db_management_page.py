@@ -19,7 +19,7 @@ class DBManagementPage(ttk.Frame):
         self.current_db = None
         self.all_databases = []
         self.all_items = []
-        self.context_menu_db = None
+        self.context_menu_dbs = []  # Changed to support multiple selections
 
         # --- Styles ---
         style = ttk.Style(self)
@@ -107,7 +107,7 @@ class DBManagementPage(ttk.Frame):
         self.db_tree.pack(expand=True, fill="both", pady=5)
         self.db_tree.bind("<<TreeviewSelect>>", self.on_db_select)
 
-        # --- CONTEXT MENU: clone and delete options ---
+        # --- CONTEXT MENU: dynamically updated based on selection ---
         self.db_context_menu = tk.Menu(
             self,
             tearoff=0,
@@ -116,13 +116,6 @@ class DBManagementPage(ttk.Frame):
             fg="black",
             activebackground="#7BB837",
             activeforeground="white",
-        )
-        self.db_context_menu.add_command(
-            label="🔁 Clone DB", command=self.clone_database
-        )
-        self.db_context_menu.add_separator()
-        self.db_context_menu.add_command(
-            label="🗑️ Delete DB", command=self.delete_database_from_context
         )
 
         # bind right-click / ctrl+click / menu key
@@ -358,8 +351,22 @@ class DBManagementPage(ttk.Frame):
         item = self.db_tree.identify_row(event.y)
         if not item:
             return
-        self.db_tree.selection_set(item)
-        self.context_menu_db = self.db_tree.item(item)["values"][0]
+
+        # If clicked item is not in current selection, select only it
+        if item not in self.db_tree.selection():
+            self.db_tree.selection_set(item)
+
+        # Get all selected items
+        selected_items = self.db_tree.selection()
+        if not selected_items:
+            return
+
+        selected_dbs = [self.db_tree.item(i)["values"][0] for i in selected_items]
+        self.context_menu_dbs = selected_dbs
+
+        # Update menu labels based on selection count
+        self.update_context_menu_labels(len(selected_dbs))
+
         try:
             self.db_context_menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -369,8 +376,15 @@ class DBManagementPage(ttk.Frame):
         selected = self.db_tree.selection()
         if not selected:
             return
+
+        selected_dbs = [self.db_tree.item(i)["values"][0] for i in selected]
+        self.context_menu_dbs = selected_dbs
+
+        # Update menu labels based on selection count
+        self.update_context_menu_labels(len(selected_dbs))
+
+        # Get position from first selected item
         item = selected[0]
-        self.context_menu_db = self.db_tree.item(item)["values"][0]
         bbox = self.db_tree.bbox(item)
         if not bbox:
             return
@@ -381,12 +395,48 @@ class DBManagementPage(ttk.Frame):
         finally:
             self.db_context_menu.grab_release()
 
+    def update_context_menu_labels(self, count):
+        """Update context menu labels based on number of selected databases"""
+        # Clear existing menu
+        self.db_context_menu.delete(0, "end")
+
+        if count == 1:
+            self.db_context_menu.add_command(
+                label="🔁 Clone DB", command=self.clone_database
+            )
+            self.db_context_menu.add_separator()
+            self.db_context_menu.add_command(
+                label="🗑️ Delete DB", command=self.delete_database_from_context
+            )
+        else:
+            self.db_context_menu.add_command(
+                label="🔁 Clone DB", command=self.clone_database
+            )
+            self.db_context_menu.add_separator()
+            self.db_context_menu.add_command(
+                label=f"🗑️ Delete {count} DBs", command=self.delete_database_from_context
+            )
+
     def clone_database(self):
         """Open dialog for naming and quantity of cloned DBs."""
+        # Only allow cloning one database at a time
+        if not self.context_menu_dbs:
+            return
+
+        if len(self.context_menu_dbs) > 1:
+            messagebox.showwarning(
+                "Clone Limitation",
+                "Please select only one database to clone.\n"
+                f"Currently selected: {len(self.context_menu_dbs)} databases",
+            )
+            return
+
+        source_db = self.context_menu_dbs[0]
+
         import datetime
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d")
-        default_name = f"{self.context_menu_db}_copy_{timestamp}"
+        default_name = f"{source_db}_copy_{timestamp}"
 
         dialog = tk.Toplevel(self)
         dialog.title("🔁 Clone Database")
@@ -524,11 +574,9 @@ class DBManagementPage(ttk.Frame):
                     else:
                         current_name = f"{new_name}_{i+1:02d}"
 
-                    update_status(
-                        f"Cloning {self.context_menu_db} to {current_name}..."
-                    )
+                    update_status(f"Cloning {source_db} to {current_name}...")
                     copy_database_logic(
-                        credentials, self.context_menu_db, current_name, update_status
+                        credentials, source_db, current_name, update_status
                     )
 
                 # Success - update UI
@@ -626,14 +674,14 @@ class DBManagementPage(ttk.Frame):
         dialog.destroy()
 
     def delete_database_from_context(self):
-        """Delete a single database from context menu with styled confirmation dialog"""
-        db_name = self.context_menu_db
-        if not db_name:
+        """Delete selected databases from context menu with styled confirmation dialog"""
+        db_names = self.context_menu_dbs
+        if not db_names:
             return
 
         # Create custom confirmation dialog
         dialog = tk.Toplevel(self)
-        dialog.title("⚠️ Delete Database")
+        dialog.title("⚠️ Delete Database(s)")
         dialog.transient(self)
         dialog.grab_set()
 
@@ -667,7 +715,7 @@ class DBManagementPage(ttk.Frame):
             "DatabaseName.TLabel",
             background="#181F67",
             foreground="#FF6B6B",  # Light red for emphasis
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 11, "bold"),
         )
 
         # Dialog Delete button style (red)
@@ -699,32 +747,68 @@ class DBManagementPage(ttk.Frame):
         content_frame.pack(fill="both", expand=True)
 
         # Warning icon and header
-        ttk.Label(
-            content_frame, text="⚠️ CRITICAL WARNING", style="WarningHeader.TLabel"
-        ).pack(pady=(0, 15))
+        if len(db_names) == 1:
+            header_text = "⚠️ CRITICAL WARNING"
+            warning_text = (
+                "You are about to permanently delete the following database:\n\n"
+                "This action will:\n"
+                "• Terminate all active connections\n"
+                "• Permanently delete all data\n"
+                "• Cannot be undone\n\n"
+                "Are you absolutely sure you want to proceed?"
+            )
+        else:
+            header_text = "⚠️ CRITICAL WARNING - MULTIPLE DATABASES"
+            warning_text = (
+                f"You are about to permanently delete {len(db_names)} databases:\n\n"
+                "This action will:\n"
+                "• Terminate all active connections for each database\n"
+                "• Permanently delete all data in each database\n"
+                "• Cannot be undone\n\n"
+                "Are you absolutely sure you want to proceed?"
+            )
+
+        ttk.Label(content_frame, text=header_text, style="WarningHeader.TLabel").pack(
+            pady=(0, 15)
+        )
 
         # Warning message
-        warning_text = (
-            "You are about to permanently delete the following database:\n\n"
-            "This action will:\n"
-            "• Terminate all active connections\n"
-            "• Permanently delete all data\n"
-            "• Cannot be undone\n\n"
-            "Are you absolutely sure you want to proceed?"
-        )
         ttk.Label(
             content_frame, text=warning_text, style="Warning.TLabel", justify="center"
         ).pack(pady=(0, 10))
 
-        # Database name highlight
-        ttk.Label(content_frame, text=f'"{db_name}"', style="DatabaseName.TLabel").pack(
-            pady=(0, 20)
-        )
+        # Database names highlight
+        if len(db_names) == 1:
+            ttk.Label(
+                content_frame, text=f'"{db_names[0]}"', style="DatabaseName.TLabel"
+            ).pack(pady=(0, 20))
+        else:
+            # Create a frame for multiple database names
+            db_frame = ttk.Frame(content_frame, style="Warning.TFrame")
+            db_frame.pack(pady=(0, 20))
+
+            # Show database names in columns if many, otherwise in a list
+            if len(db_names) <= 5:
+                for db_name in db_names:
+                    ttk.Label(
+                        db_frame, text=f'• "{db_name}"', style="DatabaseName.TLabel"
+                    ).pack()
+            else:
+                # For many databases, show first few and count
+                for db_name in db_names[:3]:
+                    ttk.Label(
+                        db_frame, text=f'• "{db_name}"', style="DatabaseName.TLabel"
+                    ).pack()
+                ttk.Label(
+                    db_frame,
+                    text=f"... and {len(db_names) - 3} more databases",
+                    style="DatabaseName.TLabel",
+                ).pack()
 
         # Button handlers
         def on_delete():
             dialog.destroy()
-            self.perform_database_deletion(db_name)
+            self.perform_multiple_database_deletion(db_names)
 
         def on_cancel():
             dialog.destroy()
@@ -733,11 +817,13 @@ class DBManagementPage(ttk.Frame):
         btn_frame = ttk.Frame(content_frame, style="Warning.TFrame")
         btn_frame.pack(pady=(20, 0))
 
+        if len(db_names) == 1:
+            delete_text = "DELETE DATABASE"
+        else:
+            delete_text = f"DELETE {len(db_names)} DATABASES"
+
         delete_btn = ttk.Button(
-            btn_frame,
-            text="DELETE DATABASE",
-            command=on_delete,
-            style="DialogDelete.TButton",
+            btn_frame, text=delete_text, command=on_delete, style="DialogDelete.TButton"
         )
         delete_btn.pack(side="left", padx=20)
 
@@ -750,8 +836,9 @@ class DBManagementPage(ttk.Frame):
         cancel_btn.pack(side="right", padx=20)
 
         # Set minimum size and center the dialog
-        dialog.minsize(450, 350)
-        dialog.geometry("450x350")
+        min_height = 350 if len(db_names) <= 5 else 400
+        dialog.minsize(450, min_height)
+        dialog.geometry(f"450x{min_height}")
 
         # Center dialog on parent window
         dialog.update_idletasks()
@@ -767,32 +854,69 @@ class DBManagementPage(ttk.Frame):
         cancel_btn.focus()
         dialog.wait_window()
 
-    def perform_database_deletion(self, db_name):
-        """Perform the actual database deletion in background thread"""
+    def perform_multiple_database_deletion(self, db_names):
+        """Perform deletion of multiple databases in background thread"""
 
         def deletion_worker():
             credentials = self.controller.db_credentials
-            try:
-                terminate_and_delete_database(credentials, db_name)
-                # Success - update UI on main thread
-                self.after(0, lambda: self.finish_deletion_success(db_name))
-            except Exception as e:
-                # Error - show error message on main thread
-                self.after(0, lambda: self.finish_deletion_error(db_name, str(e)))
+            errors = []
+            successful_deletions = []
+
+            for db_name in db_names:
+                try:
+                    terminate_and_delete_database(credentials, db_name)
+                    successful_deletions.append(db_name)
+                except Exception as e:
+                    errors.append(f"{db_name}: {str(e)}")
+
+            # Update UI on main thread
+            self.after(
+                0, lambda: self.finish_multiple_deletion(successful_deletions, errors)
+            )
 
         # Start deletion in background thread
         threading.Thread(target=deletion_worker, daemon=True).start()
 
+    def finish_multiple_deletion(self, successful_deletions, errors):
+        """Handle completion of multiple database deletions"""
+        # Refresh the database list
+        self.load_databases()
+
+        if errors and successful_deletions:
+            # Partial success
+            success_msg = f"Successfully deleted: {', '.join(successful_deletions)}"
+            error_msg = f"Failed to delete:\n" + "\n".join(errors)
+            messagebox.showwarning("Partial Success", f"{success_msg}\n\n{error_msg}")
+        elif errors:
+            # All failed
+            error_msg = "Failed to delete databases:\n" + "\n".join(errors)
+            messagebox.showerror("Deletion Error", error_msg)
+        else:
+            # All successful
+            if len(successful_deletions) == 1:
+                messagebox.showinfo(
+                    "Deletion Complete",
+                    f"Database '{successful_deletions[0]}' has been successfully deleted.",
+                )
+            else:
+                messagebox.showinfo(
+                    "Deletion Complete",
+                    f"{len(successful_deletions)} databases have been successfully deleted.",
+                )
+
+    def perform_database_deletion(self, db_name):
+        """Perform the actual database deletion in background thread (legacy method for single deletion)"""
+        self.perform_multiple_database_deletion([db_name])
+
     def finish_deletion_success(self, db_name):
-        """Handle successful deletion completion"""
+        """Handle successful deletion completion (legacy method)"""
         messagebox.showinfo(
             "Deletion Complete", f"Database '{db_name}' has been successfully deleted."
         )
-        # Refresh the database list to remove the deleted database
         self.load_databases()
 
     def finish_deletion_error(self, db_name, error_message):
-        """Handle deletion error"""
+        """Handle deletion error (legacy method)"""
         messagebox.showerror(
             "Deletion Error", f"Failed to delete database '{db_name}':\n{error_message}"
         )
