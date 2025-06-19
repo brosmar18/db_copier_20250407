@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 import sqlparse
+from datetime import datetime
 from db import (
     fetch_databases,
     get_database_details,
@@ -30,6 +31,11 @@ class DBManagementPage(ttk.Frame):
         ]  # System databases to protect
         self.current_view = "normal"  # Track current view: "normal" or "query"
 
+        # Query history storage - dictionary with database names as keys
+        self.query_history = (
+            {}
+        )  # {db_name: [{'timestamp': datetime, 'query': str, 'success': bool, 'result_count': int}]}
+
         # --- Enhanced Styles ---
         style = ttk.Style(self)
         style.theme_use("clam")
@@ -50,6 +56,23 @@ class DBManagementPage(ttk.Frame):
         )
         style.map("Custom.Treeview.Heading", background=[("active", "#34495E")])
         style.map("Custom.Treeview", background=[("selected", "#3498DB")])
+
+        # History Treeview styles
+        style.configure(
+            "History.Treeview.Heading",
+            background="#34495E",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+        )
+        style.configure(
+            "History.Treeview",
+            font=("Segoe UI", 9),
+            rowheight=22,
+            fieldbackground="#FAFAFA",
+        )
+        style.map("History.Treeview.Heading", background=[("active", "#2C3E50")])
+        style.map("History.Treeview", background=[("selected", "#5DADE2")])
 
         # Modern button styles
         style.configure(
@@ -426,15 +449,15 @@ class DBManagementPage(ttk.Frame):
         fields_scrollbar.grid(row=0, column=1, sticky="ns")
 
     def create_query_view(self):
-        """Create the SQL query interface view"""
+        """Create the SQL query interface view with tabs for Query and History"""
         self.query_frame = ttk.Frame(self.right_frame, style="Query.TFrame")
         self.query_frame.grid(row=0, column=0, sticky="nsew")
         self.query_frame.columnconfigure(0, weight=1)
-        self.query_frame.rowconfigure(3, weight=1)  # Results section should expand
+        self.query_frame.rowconfigure(1, weight=1)  # Notebook should expand
 
         # Header with database name and back button
         header_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 15))
         header_frame.columnconfigure(1, weight=1)
 
         self.query_db_label = ttk.Label(
@@ -452,9 +475,44 @@ class DBManagementPage(ttk.Frame):
         )
         back_btn.grid(row=0, column=2, sticky="e", padx=(20, 0))
 
+        # Create notebook for tabs
+        self.query_notebook = ttk.Notebook(self.query_frame)
+        self.query_notebook.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
+
+        # Create Query Tab
+        self.create_query_tab()
+
+        # Create History Tab
+        self.create_history_tab()
+
+        # Enhanced status bar
+        status_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
+        status_frame.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+
+        status_bg_frame = ttk.Frame(status_frame)
+        status_bg_frame.pack(fill="x")
+        status_bg_frame.configure(style="Query.TFrame")
+
+        self.status_label = ttk.Label(
+            status_bg_frame,
+            text="Ready to execute queries...",
+            font=("Segoe UI", 10, "italic"),
+            foreground="#7F8C8D",
+            background="#F8F9FA",
+        )
+        self.status_label.pack(side="left", padx=10, pady=8)
+
+    def create_query_tab(self):
+        """Create the main query tab"""
+        query_tab = ttk.Frame(self.query_notebook, style="Query.TFrame")
+        self.query_notebook.add(query_tab, text="Query")
+
+        query_tab.columnconfigure(0, weight=1)
+        query_tab.rowconfigure(2, weight=1)  # Results section should expand
+
         # SQL Editor Section
-        editor_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        editor_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15))
+        editor_frame = ttk.Frame(query_tab, style="Query.TFrame")
+        editor_frame.grid(row=0, column=0, sticky="ew", pady=(10, 15))
         editor_frame.columnconfigure(0, weight=1)
 
         editor_label = ttk.Label(
@@ -499,8 +557,8 @@ class DBManagementPage(ttk.Frame):
         editor_container.grid_rowconfigure(0, weight=1)
 
         # Enhanced button frame
-        button_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        button_frame.grid(row=2, column=0, sticky="ew", pady=(15, 20))
+        button_frame = ttk.Frame(query_tab, style="Query.TFrame")
+        button_frame.grid(row=1, column=0, sticky="ew", pady=(15, 15))
 
         execute_btn = ttk.Button(
             button_frame,
@@ -527,8 +585,8 @@ class DBManagementPage(ttk.Frame):
         clear_btn.pack(side="left")
 
         # Results section
-        results_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        results_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 15))
+        results_frame = ttk.Frame(query_tab, style="Query.TFrame")
+        results_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 10))
         results_frame.columnconfigure(0, weight=1)
         results_frame.rowconfigure(1, weight=1)
 
@@ -561,22 +619,99 @@ class DBManagementPage(ttk.Frame):
         results_scrollbar_v.grid(row=0, column=1, sticky="ns")
         results_scrollbar_h.grid(row=1, column=0, sticky="ew")
 
-        # Enhanced status bar
-        status_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        status_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+    def create_history_tab(self):
+        """Create the query history tab"""
+        history_tab = ttk.Frame(self.query_notebook, style="Query.TFrame")
+        self.query_notebook.add(history_tab, text="History")
 
-        status_bg_frame = ttk.Frame(status_frame)
-        status_bg_frame.pack(fill="x")
-        status_bg_frame.configure(style="Query.TFrame")
+        history_tab.columnconfigure(0, weight=1)
+        history_tab.rowconfigure(1, weight=1)
 
-        self.status_label = ttk.Label(
-            status_bg_frame,
-            text="Ready to execute queries...",
-            font=("Segoe UI", 10, "italic"),
-            foreground="#7F8C8D",
-            background="#F8F9FA",
+        # History header and controls
+        history_header_frame = ttk.Frame(history_tab, style="Query.TFrame")
+        history_header_frame.grid(row=0, column=0, sticky="ew", pady=(10, 15))
+        history_header_frame.columnconfigure(1, weight=1)
+
+        history_label = ttk.Label(
+            history_header_frame, text="Query History:", style="QuerySubHeader.TLabel"
         )
-        self.status_label.pack(side="left", padx=10, pady=8)
+        history_label.grid(row=0, column=0, sticky="w")
+
+        # Clear history button
+        clear_history_btn = ttk.Button(
+            history_header_frame,
+            text="Clear History",
+            command=self.clear_query_history,
+            style="Danger.TButton",
+        )
+        clear_history_btn.grid(row=0, column=2, sticky="e", padx=(10, 0))
+
+        # History treeview with scrollbars
+        history_container = ttk.Frame(history_tab, style="Query.TFrame")
+        history_container.grid(row=1, column=0, sticky="nsew")
+        history_container.columnconfigure(0, weight=1)
+        history_container.rowconfigure(0, weight=1)
+
+        self.history_tree = ttk.Treeview(
+            history_container,
+            columns=("timestamp", "preview", "status", "rows"),
+            show="headings",
+            style="History.Treeview",
+        )
+
+        # Configure columns
+        self.history_tree.heading("timestamp", text="Time")
+        self.history_tree.heading("preview", text="Query Preview")
+        self.history_tree.heading("status", text="Status")
+        self.history_tree.heading("rows", text="Rows")
+
+        self.history_tree.column("timestamp", width=120, minwidth=120)
+        self.history_tree.column("preview", width=400, minwidth=200)
+        self.history_tree.column("status", width=80, minwidth=80)
+        self.history_tree.column("rows", width=60, minwidth=60)
+
+        # Add scrollbars for history
+        history_scrollbar_v = ttk.Scrollbar(
+            history_container, orient="vertical", command=self.history_tree.yview
+        )
+        history_scrollbar_h = ttk.Scrollbar(
+            history_container, orient="horizontal", command=self.history_tree.xview
+        )
+        self.history_tree.configure(
+            yscrollcommand=history_scrollbar_v.set,
+            xscrollcommand=history_scrollbar_h.set,
+        )
+
+        self.history_tree.grid(row=0, column=0, sticky="nsew")
+        history_scrollbar_v.grid(row=0, column=1, sticky="ns")
+        history_scrollbar_h.grid(row=1, column=0, sticky="ew")
+
+        # Bind events for history interaction
+        self.history_tree.bind("<Double-1>", self.load_query_from_history)
+        self.history_tree.bind("<Button-3>", self.show_history_context_menu)
+
+        # Create history context menu
+        self.history_context_menu = tk.Menu(
+            self,
+            tearoff=0,
+            font=("Segoe UI", 10),
+            bg="#FFFFFF",
+            fg="#2C3E50",
+            activebackground="#3498DB",
+            activeforeground="white",
+            borderwidth=1,
+            relief="solid",
+        )
+        self.history_context_menu.add_command(
+            label="Copy Query to Editor", command=self.copy_query_to_editor
+        )
+        self.history_context_menu.add_command(
+            label="Copy Query to Clipboard", command=self.copy_query_to_clipboard
+        )
+        self.history_context_menu.add_separator()
+        self.history_context_menu.add_command(
+            label="Remove from History", command=self.remove_from_history
+        )
 
     def show_normal_view(self):
         """Switch to normal view (tables/details)"""
@@ -597,12 +732,403 @@ class DBManagementPage(ttk.Frame):
         self.results_tree.delete(*self.results_tree.get_children())
         self.status_label.config(text="Ready to execute queries...")
 
+        # Load history for this database
+        self.load_query_history()
+
         # Switch views
         self.normal_frame.grid_remove()
         self.query_frame.grid()
 
         # Focus on SQL editor
         self.sql_text.focus()
+
+    def add_to_query_history(self, query, success, result_count=0):
+        """Add a query to the history for the current database"""
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+
+        # Initialize history for database if needed
+        if db_name not in self.query_history:
+            self.query_history[db_name] = []
+
+        # Create history entry
+        history_entry = {
+            "timestamp": datetime.now(),
+            "query": query.strip(),
+            "success": success,
+            "result_count": result_count,
+        }
+
+        # Add to beginning of list (newest first)
+        self.query_history[db_name].insert(0, history_entry)
+
+        # Keep only last 100 queries per database
+        if len(self.query_history[db_name]) > 100:
+            self.query_history[db_name] = self.query_history[db_name][:100]
+
+        # Refresh history display if we're in query view
+        if self.current_view == "query":
+            self.load_query_history()
+
+    def create_smart_query_preview(self, query, max_length=65):
+        """Create an intelligent preview of the SQL query"""
+        # Clean up the query - remove empty lines and comments
+        lines = [line.strip() for line in query.strip().split("\n")]
+        lines = [line for line in lines if line and not line.startswith("--")]
+
+        if not lines:
+            return "Empty query"
+
+        # Join all meaningful lines and clean whitespace
+        clean_query = " ".join(lines)
+        clean_query = " ".join(
+            clean_query.split()
+        )  # Replace multiple spaces with single space
+
+        # Detect query type and extract key information
+        upper_query = clean_query.upper()
+
+        try:
+            if upper_query.startswith("SELECT"):
+                return self._create_select_preview(clean_query, max_length)
+            elif upper_query.startswith("INSERT"):
+                return self._create_insert_preview(clean_query, max_length)
+            elif upper_query.startswith("UPDATE"):
+                return self._create_update_preview(clean_query, max_length)
+            elif upper_query.startswith("DELETE"):
+                return self._create_delete_preview(clean_query, max_length)
+            elif upper_query.startswith("CREATE"):
+                return self._create_create_preview(clean_query, max_length)
+            elif upper_query.startswith("ALTER"):
+                return self._create_alter_preview(clean_query, max_length)
+            elif upper_query.startswith("DROP"):
+                return self._create_drop_preview(clean_query, max_length)
+            else:
+                # For other queries, truncate intelligently
+                return self._truncate_query(clean_query, max_length)
+        except:
+            # If any parsing fails, fall back to simple truncation
+            return self._truncate_query(clean_query, max_length)
+
+    def _create_select_preview(self, query, max_length):
+        """Create preview for SELECT statements"""
+        upper_query = query.upper()
+        from_pos = upper_query.find(" FROM ")
+
+        if from_pos == -1:
+            return self._truncate_query(query, max_length)
+
+        # Extract the SELECT part (columns)
+        select_part = query[6:from_pos].strip()  # Remove "SELECT"
+
+        # Extract table name (first word after FROM)
+        after_from = query[from_pos + 6 :].strip()
+        table_parts = after_from.split()
+        table_name = table_parts[0] if table_parts else "table"
+
+        # Clean up columns - remove extra whitespace
+        columns = " ".join(select_part.split())
+
+        # Create intelligent column preview
+        if "*" in columns:
+            column_preview = "*"
+        elif "," in columns:
+            # Multiple columns - show first few
+            col_list = [col.strip() for col in columns.split(",")]
+            if len(col_list) <= 2:
+                column_preview = columns
+            else:
+                column_preview = f"{col_list[0]}, {col_list[1]}, ..."
+        else:
+            # Single column
+            column_preview = columns
+
+        # Limit column preview length
+        if len(column_preview) > 25:
+            column_preview = column_preview[:22] + "..."
+
+        preview = f"SELECT {column_preview} FROM {table_name}"
+        return self._truncate_query(preview, max_length)
+
+    def _create_insert_preview(self, query, max_length):
+        """Create preview for INSERT statements"""
+        upper_query = query.upper()
+        into_pos = upper_query.find(" INTO ")
+
+        if into_pos == -1:
+            return self._truncate_query(query, max_length)
+
+        # Extract table name
+        after_into = query[into_pos + 6 :].strip()
+        table_parts = after_into.split()
+        table_name = table_parts[0] if table_parts else "table"
+
+        # Check if it's INSERT INTO ... VALUES or INSERT INTO ... SELECT
+        if "VALUES" in upper_query:
+            preview = f"INSERT INTO {table_name} VALUES"
+        elif "SELECT" in upper_query:
+            preview = f"INSERT INTO {table_name} SELECT"
+        else:
+            preview = f"INSERT INTO {table_name}"
+
+        return self._truncate_query(preview, max_length)
+
+    def _create_update_preview(self, query, max_length):
+        """Create preview for UPDATE statements"""
+        parts = query.split()
+        if len(parts) >= 2:
+            table_name = parts[1]
+            preview = f"UPDATE {table_name} SET"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _create_delete_preview(self, query, max_length):
+        """Create preview for DELETE statements"""
+        upper_query = query.upper()
+        from_pos = upper_query.find(" FROM ")
+
+        if from_pos == -1:
+            return self._truncate_query(query, max_length)
+
+        # Extract table name
+        after_from = query[from_pos + 6 :].strip()
+        table_parts = after_from.split()
+        table_name = table_parts[0] if table_parts else "table"
+
+        preview = f"DELETE FROM {table_name}"
+        return self._truncate_query(preview, max_length)
+
+    def _create_create_preview(self, query, max_length):
+        """Create preview for CREATE statements"""
+        parts = query.split()
+        if len(parts) >= 3:
+            object_type = parts[1].upper()  # TABLE, INDEX, VIEW, etc.
+            object_name = parts[2]
+            preview = f"CREATE {object_type} {object_name}"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _create_alter_preview(self, query, max_length):
+        """Create preview for ALTER statements"""
+        parts = query.split()
+        if len(parts) >= 3:
+            object_type = parts[1].upper()  # TABLE, INDEX, etc.
+            object_name = parts[2]
+            preview = f"ALTER {object_type} {object_name}"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _create_drop_preview(self, query, max_length):
+        """Create preview for DROP statements"""
+        parts = query.split()
+        if len(parts) >= 3:
+            object_type = parts[1].upper()  # TABLE, INDEX, etc.
+            object_name = parts[2]
+            preview = f"DROP {object_type} {object_name}"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _truncate_query(self, query, max_length):
+        """Truncate query with ellipsis if needed"""
+        if len(query) <= max_length:
+            return query
+        else:
+            return query[: max_length - 3] + "..."
+
+    def load_query_history(self):
+        """Load and display query history for current database"""
+        # Clear existing history display
+        self.history_tree.delete(*self.history_tree.get_children())
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+
+        if db_name not in self.query_history:
+            return
+
+        # Populate history tree
+        for entry in self.query_history[db_name]:
+            # Format timestamp
+            time_str = entry["timestamp"].strftime("%H:%M:%S")
+
+            # Create intelligent query preview
+            preview = self.create_smart_query_preview(entry["query"])
+
+            # Status
+            status = "Success" if entry["success"] else "Error"
+
+            # Result count
+            rows = str(entry["result_count"]) if entry["success"] else "-"
+
+            # Insert into tree
+            self.history_tree.insert(
+                "", tk.END, values=(time_str, preview, status, rows)
+            )
+
+    def load_query_from_history(self, event):
+        """Load selected query from history into editor (double-click)"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        # Get the selected item index
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        # Get the query
+        query = self.query_history[db_name][index]["query"]
+
+        # Load into editor
+        self.sql_text.delete("1.0", tk.END)
+        self.sql_text.insert("1.0", query)
+
+        # Switch to query tab
+        self.query_notebook.select(0)
+
+        # Focus on editor
+        self.sql_text.focus()
+
+    def show_history_context_menu(self, event):
+        """Show context menu for history items"""
+        # Select the item that was right-clicked
+        item = self.history_tree.identify_row(event.y)
+        if item:
+            self.history_tree.selection_set(item)
+            try:
+                self.history_context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                self.history_context_menu.grab_release()
+
+    def copy_query_to_editor(self):
+        """Copy selected query from history to editor"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        # Get the selected item index
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        # Get the query
+        query = self.query_history[db_name][index]["query"]
+
+        # Load into editor
+        self.sql_text.delete("1.0", tk.END)
+        self.sql_text.insert("1.0", query)
+
+        # Switch to query tab
+        self.query_notebook.select(0)
+
+        # Focus on editor
+        self.sql_text.focus()
+
+    def copy_query_to_clipboard(self):
+        """Copy selected query from history to clipboard"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        # Get the selected item index
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        # Get the query
+        query = self.query_history[db_name][index]["query"]
+
+        # Copy to clipboard
+        self.clipboard_clear()
+        self.clipboard_append(query)
+
+        # Update status
+        self.status_label.config(text="Query copied to clipboard")
+
+    def remove_from_history(self):
+        """Remove selected query from history"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        # Get the selected item index
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        # Remove from history
+        del self.query_history[db_name][index]
+
+        # Refresh display
+        self.load_query_history()
+
+        # Update status
+        self.status_label.config(text="Query removed from history")
+
+    def clear_query_history(self):
+        """Clear all query history for current database"""
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+
+        # Confirm deletion
+        result = messagebox.askyesno(
+            "Clear History",
+            f"Are you sure you want to clear all query history for database '{db_name}'?\n\nThis action cannot be undone.",
+            icon="warning",
+        )
+
+        if result:
+            # Clear history
+            if db_name in self.query_history:
+                self.query_history[db_name] = []
+
+            # Refresh display
+            self.load_query_history()
+
+            # Update status
+            self.status_label.config(text="Query history cleared")
 
     # --- Database loading/filtering/selection methods ---
     def load_databases(self):
@@ -865,7 +1391,7 @@ class DBManagementPage(ttk.Frame):
 
         import datetime
 
-        timestamp = datetime.datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d")
         default_name = f"{source_db}_copy_{timestamp}"
 
         dialog = tk.Toplevel(self)
@@ -1257,19 +1783,21 @@ class DBManagementPage(ttk.Frame):
             credentials = self.controller.db_credentials
             try:
                 result = execute_sql_query(credentials, self.query_db_name, sql_query)
-                self.after(0, lambda: self.display_query_results(result))
+                self.after(0, lambda: self.display_query_results(result, sql_query))
             except Exception as e:
                 error_result = {
                     "success": False,
                     "message": f"Execution error: {str(e)}",
                     "execution_time_ms": 0,
                 }
-                self.after(0, lambda: self.display_query_results(error_result))
+                self.after(
+                    0, lambda: self.display_query_results(error_result, sql_query)
+                )
 
         threading.Thread(target=query_worker, daemon=True).start()
 
-    def display_query_results(self, result):
-        """Display query results in the treeview."""
+    def display_query_results(self, result, original_query):
+        """Display query results in the treeview and add to history."""
         # Clear previous results
         self.results_tree.delete(*self.results_tree.get_children())
 
@@ -1282,6 +1810,10 @@ class DBManagementPage(ttk.Frame):
             status_text = result["message"]
 
         self.status_label.config(text=status_text)
+
+        # Add to query history
+        result_count = result.get("row_count", 0) if result["success"] else 0
+        self.add_to_query_history(original_query, result["success"], result_count)
 
         if not result["success"]:
             # Show error in results area
