@@ -30,138 +30,257 @@ class DBManagementPage(ttk.Frame):
         ]  # System databases to protect
         self.current_view = "normal"  # Track current view: "normal" or "query"
 
-        # --- Styles ---
+        # --- Enhanced Styles ---
         style = ttk.Style(self)
         style.theme_use("clam")
+
+        # Custom Treeview styles
         style.configure(
             "Custom.Treeview.Heading",
-            background="#181F67",
+            background="#2C3E50",
             foreground="white",
-            font=("Helvetica", 12, "bold"),
-        )
-        style.configure("Custom.Treeview", font=("Helvetica", 10))
-        style.map("Custom.Treeview.Heading", background=[("active", "#7BB837")])
-        style.configure(
-            "Refresh.TButton",
-            background="#7BB837",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(8, 4),
-            borderwidth=0,
+            font=("Segoe UI", 11, "bold"),
             relief="flat",
         )
-        style.map("Refresh.TButton", background=[("active", "#6AA62F")])
+        style.configure(
+            "Custom.Treeview",
+            font=("Segoe UI", 10),
+            rowheight=25,
+            fieldbackground="white",
+        )
+        style.map("Custom.Treeview.Heading", background=[("active", "#34495E")])
+        style.map("Custom.Treeview", background=[("selected", "#3498DB")])
+
+        # Modern button styles
+        style.configure(
+            "Primary.TButton",
+            background="#3498DB",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            padding=(20, 12),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Primary.TButton",
+            background=[("active", "#2980B9"), ("pressed", "#21618C")],
+        )
+
+        style.configure(
+            "Success.TButton",
+            background="#27AE60",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            padding=(20, 12),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Success.TButton",
+            background=[("active", "#229954"), ("pressed", "#1E8449")],
+        )
+
+        style.configure(
+            "Danger.TButton",
+            background="#E74C3C",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            padding=(20, 12),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Danger.TButton", background=[("active", "#C0392B"), ("pressed", "#A93226")]
+        )
+
+        style.configure(
+            "Secondary.TButton",
+            background="#95A5A6",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            padding=(20, 12),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Secondary.TButton",
+            background=[("active", "#7F8C8D"), ("pressed", "#566573")],
+        )
+
+        style.configure(
+            "Warning.TButton",
+            background="#F39C12",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            padding=(20, 12),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Warning.TButton",
+            background=[("active", "#E67E22"), ("pressed", "#CA6F1E")],
+        )
+
+        style.configure(
+            "Accent.TButton",
+            background="#9B59B6",
+            foreground="white",
+            font=("Segoe UI", 10, "bold"),
+            padding=(20, 12),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Accent.TButton", background=[("active", "#8E44AD"), ("pressed", "#7D3C98")]
+        )
+
+        # Compact button style for headers
+        style.configure(
+            "Compact.TButton",
+            background="#34495E",
+            foreground="white",
+            font=("Segoe UI", 9, "bold"),
+            padding=(12, 8),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none",
+        )
+        style.map(
+            "Compact.TButton",
+            background=[("active", "#2C3E50"), ("pressed", "#1B2631")],
+        )
 
         # Query interface styles
-        style.configure("Query.TFrame", background="white", relief="flat")
+        style.configure("Query.TFrame", background="#F8F9FA", relief="flat")
         style.configure(
             "QueryHeader.TLabel",
-            background="white",
-            foreground="#181F67",
-            font=("Helvetica", 14, "bold"),
+            background="#F8F9FA",
+            foreground="#2C3E50",
+            font=("Segoe UI", 16, "bold"),
         )
         style.configure(
-            "QueryExecute.TButton",
-            background="#38A169",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
+            "QuerySubHeader.TLabel",
+            background="#F8F9FA",
+            foreground="#34495E",
+            font=("Segoe UI", 10, "bold"),
         )
-        style.map("QueryExecute.TButton", background=[("active", "#2F855A")])
+
+        # Enhanced dialog styles
+        style.configure("Dialog.TFrame", background="#2C3E50", relief="flat")
         style.configure(
-            "QueryClear.TButton",
-            background="#718096",
+            "Dialog.TLabel",
+            background="#2C3E50",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
+            font=("Segoe UI", 11),
         )
-        style.map("QueryClear.TButton", background=[("active", "#4A5568")])
         style.configure(
-            "QueryFormat.TButton",
-            background="#805AD5",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
+            "DialogHeader.TLabel",
+            background="#2C3E50",
+            foreground="#F1C40F",
+            font=("Segoe UI", 14, "bold"),
         )
-        style.map("QueryFormat.TButton", background=[("active", "#6B46C1")])
         style.configure(
-            "QueryBack.TButton",
-            background="#E53E3E",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=(15, 8),
-            borderwidth=0,
-            relief="flat",
+            "DialogHighlight.TLabel",
+            background="#2C3E50",
+            foreground="#E74C3C",
+            font=("Segoe UI", 11, "bold"),
         )
-        style.map("QueryBack.TButton", background=[("active", "#C53030")])
 
         # --- Layout ---
         outer_frame = ttk.Frame(self)
-        outer_frame.pack(expand=True, fill="both", padx=10, pady=10)
+        outer_frame.pack(expand=True, fill="both", padx=15, pady=15)
         content_frame = ttk.Frame(outer_frame)
         content_frame.pack(expand=True, fill="both")
 
         left_frame = ttk.Frame(content_frame)
-        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         self.right_frame = ttk.Frame(content_frame)
-        self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
         content_frame.columnconfigure(0, weight=1)
         content_frame.columnconfigure(1, weight=2)
         content_frame.rowconfigure(0, weight=1)
 
         # --- LEFT PANE: DATABASES ---
         left_header = ttk.Frame(left_frame)
-        left_header.pack(fill="x")
-        ttk.Label(
+        left_header.pack(fill="x", pady=(0, 15))
+
+        title_label = ttk.Label(
             left_header,
             text="Databases",
-            font=("Helvetica", 14, "bold"),
-            foreground="#181F67",
-        ).pack(side="left", anchor="w")
-        ttk.Button(
+            font=("Segoe UI", 16, "bold"),
+            foreground="#2C3E50",
+        )
+        title_label.pack(side="left", anchor="w")
+
+        refresh_btn = ttk.Button(
             left_header,
             text="Refresh",
             command=self.load_databases,
-            style="Refresh.TButton",
-        ).pack(side="right", padx=5, pady=5)
+            style="Compact.TButton",
+        )
+        refresh_btn.pack(side="right", padx=(10, 0))
 
-        # search
+        # Enhanced search
         self.db_search_var = tk.StringVar()
         db_search_frame = ttk.Frame(left_frame)
-        db_search_frame.pack(fill="x", padx=2, pady=(2, 5))
-        ttk.Label(db_search_frame, text="Search:", font=("Helvetica", 10)).pack(
-            side="left"
+        db_search_frame.pack(fill="x", pady=(0, 10))
+
+        search_label = ttk.Label(
+            db_search_frame,
+            text="Search:",
+            font=("Segoe UI", 10, "bold"),
+            foreground="#34495E",
         )
+        search_label.pack(side="left", padx=(0, 8))
+
         self.db_search_entry = ttk.Entry(
-            db_search_frame, textvariable=self.db_search_var
+            db_search_frame, textvariable=self.db_search_var, font=("Segoe UI", 10)
         )
-        self.db_search_entry.pack(side="left", fill="x", expand=True, padx=5)
+        self.db_search_entry.pack(side="left", fill="x", expand=True)
         self.db_search_entry.bind("<KeyRelease>", self.filter_databases)
 
-        # treeview
+        # Enhanced treeview
+        tree_frame = ttk.Frame(left_frame)
+        tree_frame.pack(expand=True, fill="both")
+
         self.db_tree = ttk.Treeview(
-            left_frame, columns=("Database",), show="headings", selectmode="extended"
+            tree_frame,
+            columns=("Database",),
+            show="headings",
+            selectmode="extended",
+            style="Custom.Treeview",
         )
         self.db_tree.heading("Database", text="Database Name")
-        self.db_tree.column("Database", anchor="w", width=200)
-        self.db_tree.pack(expand=True, fill="both", pady=5)
+        self.db_tree.column("Database", anchor="w", width=250)
+
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(
+            tree_frame, orient="vertical", command=self.db_tree.yview
+        )
+        self.db_tree.configure(yscrollcommand=scrollbar.set)
+
+        self.db_tree.pack(side="left", expand=True, fill="both")
+        scrollbar.pack(side="right", fill="y")
+
         self.db_tree.bind("<<TreeviewSelect>>", self.on_db_select)
 
         # --- CONTEXT MENU: dynamically updated based on selection ---
         self.db_context_menu = tk.Menu(
             self,
             tearoff=0,
-            font=("Helvetica", 10),
-            bg="white",
-            fg="black",
-            activebackground="#7BB837",
+            font=("Segoe UI", 10),
+            bg="#FFFFFF",
+            fg="#2C3E50",
+            activebackground="#3498DB",
             activeforeground="white",
+            borderwidth=1,
+            relief="solid",
         )
 
         # bind right-click / ctrl+click / menu key
@@ -191,77 +310,120 @@ class DBManagementPage(ttk.Frame):
         self.normal_frame.columnconfigure(0, weight=1)
 
         # === NORMAL VIEW: DETAILS & TABLES/FIELDS ===
-        ttk.Label(
+        details_header = ttk.Label(
             self.normal_frame,
-            text="Details",
-            font=("Helvetica", 14, "bold"),
-            foreground="#181F67",
-        ).grid(row=0, column=0, sticky="w")
-        self.details_text = tk.Text(
-            self.normal_frame, wrap="word", font=("Helvetica", 10), height=6
+            text="Database Details",
+            font=("Segoe UI", 16, "bold"),
+            foreground="#2C3E50",
         )
-        self.details_text.grid(row=1, column=0, sticky="nsew", pady=(5, 5))
+        details_header.grid(row=0, column=0, sticky="w", pady=(0, 10))
+
+        self.details_text = tk.Text(
+            self.normal_frame,
+            wrap="word",
+            font=("Segoe UI", 10),
+            height=6,
+            bg="#F8F9FA",
+            fg="#2C3E50",
+            relief="solid",
+            borderwidth=1,
+        )
+        self.details_text.grid(row=1, column=0, sticky="nsew", pady=(0, 20))
         self.details_text.config(state="disabled")
         self.normal_frame.rowconfigure(1, weight=0)
 
         # Table/field search & header
         self.item_search_var = tk.StringVar()
         item_search_frame = ttk.Frame(self.normal_frame)
-        item_search_frame.grid(row=2, column=0, sticky="ew", padx=2, pady=(2, 5))
-        ttk.Label(item_search_frame, text="Search:", font=("Helvetica", 10)).pack(
-            side="left"
+        item_search_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+
+        search_label2 = ttk.Label(
+            item_search_frame,
+            text="Search Tables:",
+            font=("Segoe UI", 10, "bold"),
+            foreground="#34495E",
         )
+        search_label2.pack(side="left", padx=(0, 8))
+
         self.item_search_entry = ttk.Entry(
-            item_search_frame, textvariable=self.item_search_var
+            item_search_frame, textvariable=self.item_search_var, font=("Segoe UI", 10)
         )
-        self.item_search_entry.pack(side="left", fill="x", expand=True, padx=5)
+        self.item_search_entry.pack(side="left", fill="x", expand=True)
         self.item_search_entry.bind("<KeyRelease>", self.filter_items)
 
         header_frame_right = ttk.Frame(self.normal_frame)
-        header_frame_right.grid(row=3, column=0, sticky="ew")
+        header_frame_right.grid(row=3, column=0, sticky="ew", pady=(0, 10))
+
         self.right_label = ttk.Label(
             header_frame_right,
             text="Tables",
-            font=("Helvetica", 14, "bold"),
-            foreground="#181F67",
+            font=("Segoe UI", 14, "bold"),
+            foreground="#2C3E50",
         )
         self.right_label.pack(side="left")
+
         self.back_button = ttk.Button(
             header_frame_right,
-            text="Refresh",
+            text="Refresh Tables",
             command=self.back_to_tables,
-            style="Refresh.TButton",
+            style="Compact.TButton",
         )
         self.back_button.pack(side="right")
         self.back_button.grid_remove()
 
         # Tables/fields trees
         self.bottom_frame = ttk.Frame(self.normal_frame)
-        self.bottom_frame.grid(row=4, column=0, sticky="nsew", pady=(5, 0))
+        self.bottom_frame.grid(row=4, column=0, sticky="nsew")
         self.normal_frame.rowconfigure(4, weight=1)
         self.bottom_frame.columnconfigure(0, weight=1)
         self.bottom_frame.columnconfigure(1, weight=1)
 
+        # Tables tree with scrollbar
+        tables_container = ttk.Frame(self.bottom_frame)
+        tables_container.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        tables_container.columnconfigure(0, weight=1)
+        tables_container.rowconfigure(0, weight=1)
+
         self.item_tree = ttk.Treeview(
-            self.bottom_frame,
+            tables_container,
             columns=("Item",),
             show="headings",
             style="Custom.Treeview",
         )
         self.item_tree.heading("Item", text="Table Name")
         self.item_tree.column("Item", anchor="w", width=200)
+
+        tables_scrollbar = ttk.Scrollbar(
+            tables_container, orient="vertical", command=self.item_tree.yview
+        )
+        self.item_tree.configure(yscrollcommand=tables_scrollbar.set)
+
         self.item_tree.grid(row=0, column=0, sticky="nsew")
+        tables_scrollbar.grid(row=0, column=1, sticky="ns")
         self.item_tree.bind("<<TreeviewSelect>>", self.on_item_select)
 
+        # Fields tree with scrollbar
+        fields_container = ttk.Frame(self.bottom_frame)
+        fields_container.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        fields_container.columnconfigure(0, weight=1)
+        fields_container.rowconfigure(0, weight=1)
+
         self.fields_tree = ttk.Treeview(
-            self.bottom_frame,
+            fields_container,
             columns=("Field",),
             show="headings",
             style="Custom.Treeview",
         )
         self.fields_tree.heading("Field", text="Fields")
         self.fields_tree.column("Field", anchor="w", width=200)
-        self.fields_tree.grid(row=0, column=1, sticky="nsew")
+
+        fields_scrollbar = ttk.Scrollbar(
+            fields_container, orient="vertical", command=self.fields_tree.yview
+        )
+        self.fields_tree.configure(yscrollcommand=fields_scrollbar.set)
+
+        self.fields_tree.grid(row=0, column=0, sticky="nsew")
+        fields_scrollbar.grid(row=0, column=1, sticky="ns")
 
     def create_query_view(self):
         """Create the SQL query interface view"""
@@ -272,7 +434,7 @@ class DBManagementPage(ttk.Frame):
 
         # Header with database name and back button
         header_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
         header_frame.columnconfigure(1, weight=1)
 
         self.query_db_label = ttk.Label(
@@ -282,21 +444,23 @@ class DBManagementPage(ttk.Frame):
         )
         self.query_db_label.grid(row=0, column=0, sticky="w")
 
-        ttk.Button(
+        back_btn = ttk.Button(
             header_frame,
             text="← Back to Tables",
             command=self.show_normal_view,
-            style="QueryBack.TButton",
-        ).grid(row=0, column=2, sticky="e", padx=(10, 0))
+            style="Secondary.TButton",
+        )
+        back_btn.grid(row=0, column=2, sticky="e", padx=(20, 0))
 
         # SQL Editor Section
         editor_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        editor_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        editor_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15))
         editor_frame.columnconfigure(0, weight=1)
 
-        ttk.Label(editor_frame, text="SQL Query:", font=("Helvetica", 10, "bold")).grid(
-            row=0, column=0, sticky="w", pady=(0, 5)
+        editor_label = ttk.Label(
+            editor_frame, text="SQL Query:", style="QuerySubHeader.TLabel"
         )
+        editor_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
 
         # SQL text editor with scrollbar
         editor_container = ttk.Frame(editor_frame, style="Query.TFrame")
@@ -308,11 +472,13 @@ class DBManagementPage(ttk.Frame):
             height=8,
             font=("Consolas", 11),
             bg="white",
-            fg="black",
-            insertbackground="black",
-            selectbackground="#7BB837",
+            fg="#2C3E50",
+            insertbackground="#2C3E50",
+            selectbackground="#3498DB",
             selectforeground="white",
             wrap="none",
+            relief="solid",
+            borderwidth=1,
         )
 
         # Add scrollbars for SQL editor
@@ -332,40 +498,44 @@ class DBManagementPage(ttk.Frame):
 
         editor_container.grid_rowconfigure(0, weight=1)
 
-        # Button frame
+        # Enhanced button frame
         button_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        button_frame.grid(row=2, column=0, sticky="ew", pady=(10, 10))
+        button_frame.grid(row=2, column=0, sticky="ew", pady=(15, 20))
 
-        ttk.Button(
+        execute_btn = ttk.Button(
             button_frame,
-            text="▶ Execute Query",
+            text="Execute Query",
             command=self.execute_query,
-            style="QueryExecute.TButton",
-        ).pack(side="left", padx=(0, 10))
+            style="Success.TButton",
+        )
+        execute_btn.pack(side="left", padx=(0, 15))
 
-        ttk.Button(
+        format_btn = ttk.Button(
             button_frame,
-            text="✨ Format SQL",
+            text="Format SQL",
             command=self.format_sql,
-            style="QueryFormat.TButton",
-        ).pack(side="left", padx=(0, 10))
+            style="Accent.TButton",
+        )
+        format_btn.pack(side="left", padx=(0, 15))
 
-        ttk.Button(
+        clear_btn = ttk.Button(
             button_frame,
-            text="🗑 Clear",
+            text="Clear",
             command=self.clear_query,
-            style="QueryClear.TButton",
-        ).pack(side="left")
+            style="Secondary.TButton",
+        )
+        clear_btn.pack(side="left")
 
         # Results section
         results_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        results_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 10))
+        results_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 15))
         results_frame.columnconfigure(0, weight=1)
         results_frame.rowconfigure(1, weight=1)
 
-        ttk.Label(
-            results_frame, text="Query Results:", font=("Helvetica", 10, "bold")
-        ).grid(row=0, column=0, sticky="w", pady=(0, 5))
+        results_label = ttk.Label(
+            results_frame, text="Query Results:", style="QuerySubHeader.TLabel"
+        )
+        results_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
 
         # Results treeview with scrollbars
         results_container = ttk.Frame(results_frame, style="Query.TFrame")
@@ -391,14 +561,22 @@ class DBManagementPage(ttk.Frame):
         results_scrollbar_v.grid(row=0, column=1, sticky="ns")
         results_scrollbar_h.grid(row=1, column=0, sticky="ew")
 
-        # Status bar
+        # Enhanced status bar
         status_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        status_frame.grid(row=4, column=0, sticky="ew")
+        status_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+
+        status_bg_frame = ttk.Frame(status_frame)
+        status_bg_frame.pack(fill="x")
+        status_bg_frame.configure(style="Query.TFrame")
 
         self.status_label = ttk.Label(
-            status_frame, text="Ready to execute queries...", font=("Helvetica", 10)
+            status_bg_frame,
+            text="Ready to execute queries...",
+            font=("Segoe UI", 10, "italic"),
+            foreground="#7F8C8D",
+            background="#F8F9FA",
         )
-        self.status_label.grid(row=0, column=0, sticky="w")
+        self.status_label.pack(side="left", padx=10, pady=8)
 
     def show_normal_view(self):
         """Switch to normal view (tables/details)"""
@@ -616,31 +794,31 @@ class DBManagementPage(ttk.Frame):
 
         if count == 1:
             self.db_context_menu.add_command(
-                label="🔁 Clone DB", command=self.clone_database
+                label="Clone Database", command=self.clone_database
             )
             # Only show rename for non-protected databases
             if not self.is_protected_database(self.context_menu_dbs[0]):
                 self.db_context_menu.add_command(
-                    label="✏️ Rename DB", command=self.rename_database
+                    label="Rename Database", command=self.rename_database
                 )
             self.db_context_menu.add_command(
-                label="🔍 Query DB", command=self.open_query_interface
+                label="Query Database", command=self.open_query_interface
             )
             self.db_context_menu.add_separator()
 
             # Only show delete for non-protected databases
             if not self.is_protected_database(self.context_menu_dbs[0]):
                 self.db_context_menu.add_command(
-                    label="🗑️ Delete DB", command=self.delete_database_from_context
+                    label="Delete Database", command=self.delete_database_from_context
                 )
             else:
                 self.db_context_menu.add_command(
-                    label="🔒 System DB (Protected)",
+                    label="System Database (Protected)",
                     command=self.show_protection_message,
                 )
         else:
             self.db_context_menu.add_command(
-                label="🔁 Clone DB", command=self.clone_database
+                label="Clone Database", command=self.clone_database
             )
             self.db_context_menu.add_separator()
 
@@ -649,23 +827,23 @@ class DBManagementPage(ttk.Frame):
                 if protected_dbs:
                     # Some protected, some deletable
                     self.db_context_menu.add_command(
-                        label=f"🗑️ Delete {len(deletable_dbs)} DBs",
+                        label=f"Delete {len(deletable_dbs)} Databases",
                         command=self.delete_database_from_context,
                     )
                     self.db_context_menu.add_command(
-                        label=f"🔒 {len(protected_dbs)} Protected",
+                        label=f"{len(protected_dbs)} Protected",
                         command=self.show_protection_message,
                     )
                 else:
                     # All deletable
                     self.db_context_menu.add_command(
-                        label=f"🗑️ Delete {count} DBs",
+                        label=f"Delete {count} Databases",
                         command=self.delete_database_from_context,
                     )
             else:
                 # All protected
                 self.db_context_menu.add_command(
-                    label=f"🔒 All {count} DBs Protected",
+                    label=f"All {count} Databases Protected",
                     command=self.show_protection_message,
                 )
 
@@ -691,75 +869,37 @@ class DBManagementPage(ttk.Frame):
         default_name = f"{source_db}_copy_{timestamp}"
 
         dialog = tk.Toplevel(self)
-        dialog.title("🔁 Clone Database")
+        dialog.title("Clone Database")
         dialog.transient(self)
         dialog.grab_set()
 
-        # Apply color schema to dialog
-        dialog.configure(bg="#181F67")  # Navy blue background
+        # Apply enhanced styling
+        dialog.configure(bg="#2C3E50")
 
         # Setup custom styles for this dialog
         style = ttk.Style()
 
-        # Dialog-specific frame style
-        style.configure("Dialog.TFrame", background="#181F67", relief="flat")
-
-        # Dialog-specific label style
+        # Enhanced dialog styles
+        style.configure("CloneDialog.TFrame", background="#2C3E50", relief="flat")
         style.configure(
-            "Dialog.TLabel",
-            background="#181F67",
+            "CloneDialog.TLabel",
+            background="#2C3E50",
             foreground="white",
-            font=("Helvetica", 10),
+            font=("Segoe UI", 11),
         )
-
-        # Dialog-specific entry style
         style.configure(
-            "Dialog.TEntry",
-            font=("Helvetica", 10),
+            "CloneDialog.TEntry",
+            font=("Segoe UI", 11),
             fieldbackground="white",
-            borderwidth=1,
-            relief="solid",
-        )
-
-        # Dialog-specific spinbox style
-        style.configure(
-            "Dialog.TSpinbox",
-            font=("Helvetica", 10),
-            fieldbackground="white",
-            borderwidth=1,
-            relief="solid",
-        )
-
-        # Dialog OK button style (green)
-        style.configure(
-            "DialogOK.TButton",
-            background="#38A169",
-            foreground="white",
-            font=("Helvetica", 11, "bold"),
-            padding=(20, 10),
-            borderwidth=0,
+            borderwidth=2,
             relief="flat",
         )
-        style.map("DialogOK.TButton", background=[("active", "#2F855A")])
-
-        # Dialog Cancel button style (gray)
         style.configure(
-            "DialogCancel.TButton",
-            background="#718096",
-            foreground="white",
-            font=("Helvetica", 11, "bold"),
-            padding=(20, 10),
-            borderwidth=0,
+            "CloneDialog.TSpinbox",
+            font=("Segoe UI", 11),
+            fieldbackground="white",
+            borderwidth=2,
             relief="flat",
-        )
-        style.map("DialogCancel.TButton", background=[("active", "#4A5568")])
-
-        # Progress bar style
-        style.configure(
-            "Dialog.Horizontal.TProgressbar",
-            troughcolor="#E0E0E0",
-            background="#7BB837",
-            thickness=15,
         )
 
         # Variables
@@ -767,45 +907,54 @@ class DBManagementPage(ttk.Frame):
         copies_var = tk.IntVar(value=1)
         self.clone_in_progress = False
 
-        # Main content frame with styled background
-        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=35)
+        # Main content frame with enhanced styling
+        content_frame = ttk.Frame(dialog, style="CloneDialog.TFrame", padding=40)
         content_frame.pack(fill="both", expand=True)
 
         # Configure grid weights for proper expansion
         content_frame.columnconfigure(1, weight=1)
 
-        # Layout with styled widgets
-        ttk.Label(content_frame, text="New Database Name:", style="Dialog.TLabel").grid(
-            row=0, column=0, padx=(0, 15), pady=(15, 8), sticky="w"
+        # Header
+        header_label = ttk.Label(
+            content_frame,
+            text="Clone Database",
+            style="DialogHeader.TLabel",
+            font=("Segoe UI", 16, "bold"),
         )
-        name_entry = ttk.Entry(
-            content_frame, textvariable=name_var, width=35, style="Dialog.TEntry"
-        )
-        name_entry.grid(row=0, column=1, padx=(0, 15), pady=(15, 8), sticky="ew")
+        header_label.grid(row=0, column=0, columnspan=2, pady=(0, 30))
 
-        ttk.Label(content_frame, text="Number of Copies:", style="Dialog.TLabel").grid(
-            row=1, column=0, padx=(0, 15), pady=(8, 15), sticky="w"
+        # Layout with styled widgets
+        ttk.Label(
+            content_frame, text="New Database Name:", style="CloneDialog.TLabel"
+        ).grid(row=1, column=0, padx=(0, 20), pady=(0, 15), sticky="w")
+
+        name_entry = ttk.Entry(
+            content_frame, textvariable=name_var, width=35, style="CloneDialog.TEntry"
         )
+        name_entry.grid(row=1, column=1, pady=(0, 15), sticky="ew")
+
+        ttk.Label(
+            content_frame, text="Number of Copies:", style="CloneDialog.TLabel"
+        ).grid(row=2, column=0, padx=(0, 20), pady=(0, 25), sticky="w")
+
         copies_spin = ttk.Spinbox(
             content_frame,
             from_=1,
             to=100,
             textvariable=copies_var,
-            width=5,
-            style="Dialog.TSpinbox",
+            width=10,
+            style="CloneDialog.TSpinbox",
         )
-        copies_spin.grid(row=1, column=1, padx=(0, 15), pady=(8, 15), sticky="w")
+        copies_spin.grid(row=2, column=1, pady=(0, 25), sticky="w")
 
         # Progress bar (initially hidden)
-        progress_bar = ttk.Progressbar(
-            content_frame, mode="indeterminate", style="Dialog.Horizontal.TProgressbar"
-        )
-        progress_bar.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        progress_bar = ttk.Progressbar(content_frame, mode="indeterminate")
+        progress_bar.grid(row=4, column=0, columnspan=2, padx=20, pady=15, sticky="ew")
         progress_bar.grid_remove()
 
         # Status label (initially hidden)
-        status_label = ttk.Label(content_frame, text="", style="Dialog.TLabel")
-        status_label.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        status_label = ttk.Label(content_frame, text="", style="CloneDialog.TLabel")
+        status_label.grid(row=5, column=0, columnspan=2, padx=20, pady=10, sticky="w")
         status_label.grid_remove()
 
         # Button handlers
@@ -871,27 +1020,27 @@ class DBManagementPage(ttk.Frame):
             if not self.clone_in_progress:
                 dialog.destroy()
 
-        # Buttons with styled frame
-        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(30, 15))
+        # Enhanced buttons
+        btn_frame = ttk.Frame(content_frame, style="CloneDialog.TFrame")
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=(20, 0))
 
         ok_btn = ttk.Button(
-            btn_frame, text="Clone", command=on_ok, style="DialogOK.TButton"
+            btn_frame, text="Clone Database", command=on_ok, style="Success.TButton"
         )
-        ok_btn.pack(side="left", padx=15)
+        ok_btn.pack(side="left", padx=20)
 
         cancel_btn = ttk.Button(
-            btn_frame, text="Cancel", command=on_cancel, style="DialogCancel.TButton"
+            btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
         )
-        cancel_btn.pack(side="right", padx=15)
+        cancel_btn.pack(side="right", padx=20)
 
-        # Set size and center the dialog with smooth animation
-        dialog.withdraw()  # Hide dialog initially
+        # Set size and center the dialog
+        dialog.withdraw()
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (480 // 2)
-        y = self.winfo_rooty() + (self.winfo_height() // 2) - (300 // 2)
-        dialog.geometry(f"480x300+{x}+{y}")
-        dialog.deiconify()  # Show dialog smoothly
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (500 // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (350 // 2)
+        dialog.geometry(f"500x350+{x}+{y}")
+        dialog.deiconify()
 
         # Focus and wait
         name_entry.focus()
@@ -924,113 +1073,61 @@ class DBManagementPage(ttk.Frame):
             return
 
         dialog = tk.Toplevel(self)
-        dialog.title("✏️ Rename Database")
+        dialog.title("Rename Database")
         dialog.transient(self)
         dialog.grab_set()
 
-        # Apply color schema to dialog
-        dialog.configure(bg="#181F67")  # Navy blue background
-
-        # Setup custom styles for this dialog
-        style = ttk.Style()
-
-        # Dialog-specific frame style
-        style.configure("Rename.TFrame", background="#181F67", relief="flat")
-
-        # Dialog-specific label style
-        style.configure(
-            "Rename.TLabel",
-            background="#181F67",
-            foreground="white",
-            font=("Helvetica", 10),
-        )
-
-        # Dialog-specific entry style
-        style.configure(
-            "Rename.TEntry",
-            font=("Helvetica", 10),
-            fieldbackground="white",
-            foreground="black",
-            insertcolor="black",  # This makes the cursor visible
-            selectbackground="#7BB837",
-            selectforeground="white",
-            borderwidth=1,
-            relief="solid",
-        )
-
-        # Dialog OK button style (green)
-        style.configure(
-            "RenameOK.TButton",
-            background="#38A169",
-            foreground="white",
-            font=("Helvetica", 11, "bold"),
-            padding=(20, 10),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("RenameOK.TButton", background=[("active", "#2F855A")])
-
-        # Dialog Cancel button style (gray)
-        style.configure(
-            "RenameCancel.TButton",
-            background="#718096",
-            foreground="white",
-            font=("Helvetica", 11, "bold"),
-            padding=(20, 10),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("RenameCancel.TButton", background=[("active", "#4A5568")])
-
-        # Progress bar style
-        style.configure(
-            "Rename.Horizontal.TProgressbar",
-            troughcolor="#E0E0E0",
-            background="#7BB837",
-            thickness=15,
-        )
+        # Apply enhanced styling
+        dialog.configure(bg="#2C3E50")
 
         # Variables
         new_name_var = tk.StringVar(value=source_db)
         self.rename_in_progress = False
 
-        # Main content frame with styled background
-        content_frame = ttk.Frame(dialog, style="Rename.TFrame", padding=35)
+        # Main content frame with enhanced styling
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=40)
         content_frame.pack(fill="both", expand=True)
 
         # Configure grid weights for proper expansion
         content_frame.columnconfigure(1, weight=1)
 
-        # Current database name (read-only)
-        ttk.Label(content_frame, text="Current Name:", style="Rename.TLabel").grid(
-            row=0, column=0, padx=(0, 15), pady=(15, 8), sticky="w"
+        # Header
+        header_label = ttk.Label(
+            content_frame,
+            text="Rename Database",
+            style="DialogHeader.TLabel",
+            font=("Segoe UI", 16, "bold"),
         )
-        current_name_entry = ttk.Entry(content_frame, width=35, style="Rename.TEntry")
+        header_label.grid(row=0, column=0, columnspan=2, pady=(0, 30))
+
+        # Current database name (read-only)
+        ttk.Label(content_frame, text="Current Name:", style="Dialog.TLabel").grid(
+            row=1, column=0, padx=(0, 20), pady=(0, 15), sticky="w"
+        )
+
+        current_name_entry = ttk.Entry(content_frame, width=35, font=("Segoe UI", 11))
         current_name_entry.insert(0, source_db)
         current_name_entry.config(state="readonly")
-        current_name_entry.grid(
-            row=0, column=1, padx=(0, 15), pady=(15, 8), sticky="ew"
-        )
+        current_name_entry.grid(row=1, column=1, pady=(0, 15), sticky="ew")
 
         # New database name entry
-        ttk.Label(content_frame, text="New Name:", style="Rename.TLabel").grid(
-            row=1, column=0, padx=(0, 15), pady=(8, 15), sticky="w"
+        ttk.Label(content_frame, text="New Name:", style="Dialog.TLabel").grid(
+            row=2, column=0, padx=(0, 20), pady=(0, 25), sticky="w"
         )
+
         new_name_entry = ttk.Entry(
-            content_frame, textvariable=new_name_var, width=35, style="Rename.TEntry"
+            content_frame, textvariable=new_name_var, width=35, font=("Segoe UI", 11)
         )
-        new_name_entry.grid(row=1, column=1, padx=(0, 15), pady=(8, 15), sticky="ew")
+        new_name_entry.grid(row=2, column=1, pady=(0, 25), sticky="ew")
 
         # Progress bar (initially hidden)
-        progress_bar = ttk.Progressbar(
-            content_frame, mode="indeterminate", style="Rename.Horizontal.TProgressbar"
-        )
-        progress_bar.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        progress_bar = ttk.Progressbar(content_frame, mode="indeterminate")
+        progress_bar.grid(row=4, column=0, columnspan=2, padx=20, pady=15, sticky="ew")
         progress_bar.grid_remove()
 
         # Status label (initially hidden)
-        status_label = ttk.Label(content_frame, text="", style="Rename.TLabel")
-        status_label.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        status_label = ttk.Label(content_frame, text="", style="Dialog.TLabel")
+        status_label.grid(row=5, column=0, columnspan=2, padx=20, pady=10, sticky="w")
         status_label.grid_remove()
 
         # Button handlers
@@ -1093,27 +1190,30 @@ class DBManagementPage(ttk.Frame):
             if not self.rename_in_progress:
                 dialog.destroy()
 
-        # Buttons with styled frame
-        btn_frame = ttk.Frame(content_frame, style="Rename.TFrame")
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(30, 15))
+        # Enhanced buttons
+        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=(20, 0))
 
         rename_btn = ttk.Button(
-            btn_frame, text="Rename", command=on_rename, style="RenameOK.TButton"
+            btn_frame,
+            text="Rename Database",
+            command=on_rename,
+            style="Warning.TButton",
         )
-        rename_btn.pack(side="left", padx=15)
+        rename_btn.pack(side="left", padx=20)
 
         cancel_btn = ttk.Button(
-            btn_frame, text="Cancel", command=on_cancel, style="RenameCancel.TButton"
+            btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
         )
-        cancel_btn.pack(side="right", padx=15)
+        cancel_btn.pack(side="right", padx=20)
 
-        # Set size and center the dialog with smooth animation
-        dialog.withdraw()  # Hide dialog initially
+        # Set size and center the dialog
+        dialog.withdraw()
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (480 // 2)
-        y = self.winfo_rooty() + (self.winfo_height() // 2) - (320 // 2)
-        dialog.geometry(f"480x320+{x}+{y}")
-        dialog.deiconify()  # Show dialog smoothly
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (500 // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (380 // 2)
+        dialog.geometry(f"500x380+{x}+{y}")
+        dialog.deiconify()
 
         # Focus on new name entry and select all text for easy editing
         new_name_entry.focus()
@@ -1425,121 +1525,76 @@ class DBManagementPage(ttk.Frame):
 
         # Create custom confirmation dialog
         dialog = tk.Toplevel(self)
-        dialog.title("⚠️ Delete Database(s)")
+        dialog.title("Delete Database(s)")
         dialog.transient(self)
         dialog.grab_set()
 
-        # Apply color schema to dialog
-        dialog.configure(bg="#181F67")  # Navy blue background
+        # Apply enhanced styling
+        dialog.configure(bg="#2C3E50")
 
-        # Setup custom styles for this dialog
-        style = ttk.Style()
-
-        # Dialog-specific frame style
-        style.configure("Warning.TFrame", background="#181F67", relief="flat")
-
-        # Dialog-specific label style
-        style.configure(
-            "Warning.TLabel",
-            background="#181F67",
-            foreground="white",
-            font=("Helvetica", 11),
-        )
-
-        # Warning header label style
-        style.configure(
-            "WarningHeader.TLabel",
-            background="#181F67",
-            foreground="#FFD700",  # Gold color for warning
-            font=("Helvetica", 14, "bold"),
-        )
-
-        # Database name label style
-        style.configure(
-            "DatabaseName.TLabel",
-            background="#181F67",
-            foreground="#FF6B6B",  # Light red for emphasis
-            font=("Helvetica", 11, "bold"),
-        )
-
-        # Dialog Delete button style (red)
-        style.configure(
-            "DialogDelete.TButton",
-            background="#E53E3E",
-            foreground="white",
-            font=("Helvetica", 11, "bold"),
-            padding=(20, 10),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("DialogDelete.TButton", background=[("active", "#C53030")])
-
-        # Dialog Cancel button style (gray)
-        style.configure(
-            "DialogCancelWarning.TButton",
-            background="#718096",
-            foreground="white",
-            font=("Helvetica", 11, "bold"),
-            padding=(20, 10),
-            borderwidth=0,
-            relief="flat",
-        )
-        style.map("DialogCancelWarning.TButton", background=[("active", "#4A5568")])
-
-        # Main content frame with styled background
-        content_frame = ttk.Frame(dialog, style="Warning.TFrame", padding=35)
+        # Main content frame with enhanced styling
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=40)
         content_frame.pack(fill="both", expand=True)
 
-        # Warning icon and header
+        # Warning header
         if len(db_names) == 1:
-            header_text = "⚠️ Delete Database"
+            header_text = "Delete Database"
             warning_text = (
                 "This will permanently delete the database and all its data.\n"
                 "This action cannot be undone."
             )
         else:
-            header_text = f"⚠️ Delete {len(db_names)} Databases"
+            header_text = f"Delete {len(db_names)} Databases"
             warning_text = (
                 f"This will permanently delete {len(db_names)} databases and all their data.\n"
                 "This action cannot be undone."
             )
 
-        ttk.Label(content_frame, text=header_text, style="WarningHeader.TLabel").pack(
-            pady=(0, 20)
+        header_label = ttk.Label(
+            content_frame,
+            text=header_text,
+            style="DialogHeader.TLabel",
+            font=("Segoe UI", 16, "bold"),
         )
+        header_label.pack(pady=(0, 25))
 
         # Database names highlight
         if len(db_names) == 1:
-            ttk.Label(
-                content_frame, text=f'"{db_names[0]}"', style="DatabaseName.TLabel"
-            ).pack(pady=(0, 15))
+            db_label = ttk.Label(
+                content_frame, text=f'"{db_names[0]}"', style="DialogHighlight.TLabel"
+            )
+            db_label.pack(pady=(0, 20))
         else:
             # Create a frame for multiple database names
-            db_frame = ttk.Frame(content_frame, style="Warning.TFrame")
-            db_frame.pack(pady=(0, 15))
+            db_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+            db_frame.pack(pady=(0, 20))
 
             # Show database names in a more compact way
             if len(db_names) <= 3:
                 for db_name in db_names:
-                    ttk.Label(
-                        db_frame, text=f'"{db_name}"', style="DatabaseName.TLabel"
-                    ).pack()
+                    db_label = ttk.Label(
+                        db_frame, text=f'"{db_name}"', style="DialogHighlight.TLabel"
+                    )
+                    db_label.pack()
             else:
                 # For many databases, show first 2 and count
                 for db_name in db_names[:2]:
-                    ttk.Label(
-                        db_frame, text=f'"{db_name}"', style="DatabaseName.TLabel"
-                    ).pack()
-                ttk.Label(
+                    db_label = ttk.Label(
+                        db_frame, text=f'"{db_name}"', style="DialogHighlight.TLabel"
+                    )
+                    db_label.pack()
+                more_label = ttk.Label(
                     db_frame,
                     text=f"+ {len(db_names) - 2} more...",
-                    style="DatabaseName.TLabel",
-                ).pack()
+                    style="DialogHighlight.TLabel",
+                )
+                more_label.pack()
 
         # Warning message
-        ttk.Label(
-            content_frame, text=warning_text, style="Warning.TLabel", justify="center"
-        ).pack(pady=(0, 25))
+        warning_label = ttk.Label(
+            content_frame, text=warning_text, style="Dialog.TLabel", justify="center"
+        )
+        warning_label.pack(pady=(0, 30))
 
         # Button handlers
         def on_delete():
@@ -1549,39 +1604,35 @@ class DBManagementPage(ttk.Frame):
         def on_cancel():
             dialog.destroy()
 
-        # Buttons with styled frame
-        btn_frame = ttk.Frame(content_frame, style="Warning.TFrame")
-        btn_frame.pack(pady=(15, 0))
+        # Enhanced buttons
+        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        btn_frame.pack(pady=(20, 0))
 
         if len(db_names) == 1:
-            delete_text = "Delete"
+            delete_text = "Delete Database"
         else:
             delete_text = f"Delete All ({len(db_names)})"
 
         delete_btn = ttk.Button(
-            btn_frame, text=delete_text, command=on_delete, style="DialogDelete.TButton"
+            btn_frame, text=delete_text, command=on_delete, style="Danger.TButton"
         )
-        delete_btn.pack(side="left", padx=15)
+        delete_btn.pack(side="left", padx=20)
 
         cancel_btn = ttk.Button(
-            btn_frame,
-            text="Cancel",
-            command=on_cancel,
-            style="DialogCancelWarning.TButton",
+            btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
         )
-        cancel_btn.pack(side="right", padx=15)
+        cancel_btn.pack(side="right", padx=20)
 
-        # Set minimum size and center the dialog
-        min_height = 280 if len(db_names) <= 3 else 320
-        dialog.minsize(420, min_height)
+        # Set size and center the dialog
+        min_height = 320 if len(db_names) <= 3 else 360
+        dialog.minsize(450, min_height)
 
-        # Center dialog on parent window BEFORE showing content
-        dialog.withdraw()  # Hide dialog initially
+        dialog.withdraw()
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (420 // 2)
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (450 // 2)
         y = self.winfo_rooty() + (self.winfo_height() // 2) - (min_height // 2)
-        dialog.geometry(f"420x{min_height}+{x}+{y}")
-        dialog.deiconify()  # Show dialog smoothly
+        dialog.geometry(f"450x{min_height}+{x}+{y}")
+        dialog.deiconify()
 
         # Focus on cancel button by default (safer)
         cancel_btn.focus()
