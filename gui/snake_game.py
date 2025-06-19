@@ -1,6 +1,7 @@
 import tkinter as tk
 import random
 
+
 class SnakeGame(tk.Frame):
     def __init__(self, parent, width=300, height=200):
         super().__init__(parent)
@@ -8,170 +9,308 @@ class SnakeGame(tk.Frame):
         self.width = width
         self.height = height
         self.score = 0
-        self.high_score = 0  # Track top score
+        self.high_score = 0
         self.running = False
         self.after_id = None
-        self.snake_size = 10
+        self.snake_size = 12  # Slightly larger for better performance
         self.snake = []
         self.direction = "Right"
         self.food = None
+        self.game_speed = 150  # Slower for better performance
 
-        # Create canvas with dark background.
-        self.canvas = tk.Canvas(self, width=self.width, height=self.height, bg="#2C3E50", highlightthickness=0)
+        # Performance optimization: reduce update frequency
+        self.last_direction_change = 0
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        """Create game widgets efficiently"""
+        # Canvas with optimized settings
+        self.canvas = tk.Canvas(
+            self,
+            width=self.width,
+            height=self.height,
+            bg="#2C3E50",
+            highlightthickness=0,
+            relief="flat",
+            borderwidth=0,
+        )
         self.canvas.pack(fill="both", expand=True)
-        self.canvas.bind("<Configure>", self.on_resize)
 
-        # Scoreboard label (placed above the game field, outside of the canvas).
-        self.score_label = tk.Label(self, text=f"Score: {self.score} | High Score: {self.high_score}", 
-                                    font=("Helvetica", 12, "bold"), fg="white", bg="#34495E")
-        self.score_label.pack(fill="x")  # Ensures it stays above the game field
+        # Score display
+        self.score_label = tk.Label(
+            self,
+            text=f"Score: {self.score} | Best: {self.high_score}",
+            font=("Segoe UI", 11, "bold"),
+            fg="white",
+            bg="#34495E",
+            relief="flat",
+        )
+        self.score_label.pack(fill="x", ipady=5)
 
-        # Overlay Start Game button in the center.
-        self.start_button = tk.Button(self, text="Start Game", command=self.start_game,
-                                      font=("Helvetica", 14, "bold"), bg="#27AE60", fg="white")
+        # Start button
+        self.start_button = tk.Button(
+            self,
+            text="🎮 Start Game",
+            command=self.start_game,
+            font=("Segoe UI", 12, "bold"),
+            bg="#27AE60",
+            fg="white",
+            relief="flat",
+            borderwidth=0,
+            activebackground="#229954",
+        )
         self.start_button.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Restart button (hidden initially).
-        self.game_over_text_id = None
-        self.restart_button = tk.Button(self, text="Restart Game", command=self.start_game,
-                                        font=("Helvetica", 12, "bold"), bg="#E74C3C", fg="white")
+        # Game over elements (created but hidden)
+        self.game_over_elements = []
 
-        # Re-enable keyboard controls
-        self.bind_all("<Left>", self.on_key_press)
-        self.bind_all("<Right>", self.on_key_press)
-        self.bind_all("<Up>", self.on_key_press)
-        self.bind_all("<Down>", self.on_key_press)
+        # Bind keys efficiently
+        self.bind_keys()
 
-    def on_resize(self, event):
-        """Handles window resize events."""
-        self.width = event.width
-        self.height = event.height
+    def bind_keys(self):
+        """Bind keyboard events efficiently"""
+        # Use focus_set to ensure key events are captured
+        self.focus_set()
+
+        # Bind arrow keys and WASD
+        keys = {
+            "<Left>": "Left",
+            "<a>": "Left",
+            "<A>": "Left",
+            "<Right>": "Right",
+            "<d>": "Right",
+            "<D>": "Right",
+            "<Up>": "Up",
+            "<w>": "Up",
+            "<W>": "Up",
+            "<Down>": "Down",
+            "<s>": "Down",
+            "<S>": "Down",
+        }
+
+        for key, direction in keys.items():
+            self.bind(key, lambda e, d=direction: self.change_direction(d))
 
     def start_game(self):
-        """Resets and starts the game."""
+        """Start or restart the game"""
         self.reset_game()
         self.running = True
-        self.start_button.place_forget()  # Hide start button once game starts
-        self.restart_button.place_forget()
-        if self.game_over_text_id:
-            self.canvas.delete(self.game_over_text_id)
-            self.game_over_text_id = None
+        self.start_button.place_forget()
+        self.clear_game_over()
+        self.focus_set()  # Ensure focus for key events
         self.game_loop()
 
     def reset_game(self):
-        """Resets the game state."""
+        """Reset game state efficiently"""
+        # Clear canvas efficiently
         self.canvas.delete("all")
-        self.snake = [(self.width // 2, self.height // 2)]
+
+        # Reset game state
+        center_x = (self.width // 2) // self.snake_size * self.snake_size
+        center_y = (self.height // 2) // self.snake_size * self.snake_size
+        self.snake = [(center_x, center_y)]
         self.direction = "Right"
         self.score = 0
+        self.last_direction_change = 0
+
         self.update_score()
-        self.draw_snake()
         self.spawn_food()
+        self.draw_snake()
 
     def update_score(self):
-        """Updates the score label and checks for a new high score."""
+        """Update score display efficiently"""
         if self.score > self.high_score:
             self.high_score = self.score
-        self.score_label.config(text=f"Score: {self.score} | High Score: {self.high_score}")
+        self.score_label.config(text=f"Score: {self.score} | Best: {self.high_score}")
 
     def draw_snake(self):
-        """Draws the snake on the canvas."""
+        """Draw snake efficiently using rectangles"""
         self.canvas.delete("snake")
-        for (x, y) in self.snake:
-            self.canvas.create_rectangle(x, y, x + self.snake_size, y + self.snake_size,
-                                         fill="#27AE60", tag="snake")
+
+        for i, (x, y) in enumerate(self.snake):
+            # Use different color for head
+            color = "#2ECC71" if i == 0 else "#27AE60"
+            self.canvas.create_rectangle(
+                x,
+                y,
+                x + self.snake_size,
+                y + self.snake_size,
+                fill=color,
+                outline="",
+                tags="snake",
+            )
 
     def spawn_food(self):
-        """Spawns food at a random location."""
+        """Spawn food at random valid location"""
         if self.food:
             self.canvas.delete(self.food)
-        max_x = max(1, (self.width - self.snake_size) // self.snake_size)
-        max_y = max(1, (self.height - self.snake_size) // self.snake_size)
-        food_x = random.randint(0, max_x - 1) * self.snake_size
-        food_y = random.randint(0, max_y - 1) * self.snake_size
-        self.food = self.canvas.create_oval(food_x, food_y, food_x + self.snake_size, food_y + self.snake_size,
-                                            fill="#E74C3C", tag="food")
 
-    def on_key_press(self, event):
-        """Handles user input for movement."""
-        key = event.keysym
-        if key == "Left" and self.direction != "Right":
-            self.direction = "Left"
-        elif key == "Right" and self.direction != "Left":
-            self.direction = "Right"
-        elif key == "Up" and self.direction != "Down":
-            self.direction = "Up"
-        elif key == "Down" and self.direction != "Up":
-            self.direction = "Down"
+        # Calculate grid positions for consistent placement
+        max_x = (self.width - self.snake_size) // self.snake_size
+        max_y = (self.height - self.snake_size) // self.snake_size
 
-    def game_loop(self):
-        """Main game loop to update the snake movement."""
+        # Ensure food doesn't spawn on snake
+        attempts = 0
+        while attempts < 20:  # Prevent infinite loop
+            food_x = random.randint(0, max_x) * self.snake_size
+            food_y = random.randint(0, max_y) * self.snake_size
+
+            if (food_x, food_y) not in self.snake:
+                break
+            attempts += 1
+
+        # Create food
+        self.food = self.canvas.create_oval(
+            food_x + 1,
+            food_y + 1,
+            food_x + self.snake_size - 1,
+            food_y + self.snake_size - 1,
+            fill="#E74C3C",
+            outline="#C0392B",
+            width=2,
+            tags="food",
+        )
+
+    def change_direction(self, new_direction):
+        """Change direction with debouncing"""
         if not self.running:
             return
+
+        current_time = self.tk.call("clock", "milliseconds")
+        if current_time - self.last_direction_change < 100:  # Debounce
+            return
+
+        # Prevent reverse direction
+        opposites = {"Left": "Right", "Right": "Left", "Up": "Down", "Down": "Up"}
+        if new_direction != opposites.get(self.direction):
+            self.direction = new_direction
+            self.last_direction_change = current_time
+
+    def game_loop(self):
+        """Main game loop with optimized performance"""
+        if not self.running:
+            return
+
+        # Calculate new head position
         head_x, head_y = self.snake[0]
-        if self.direction == "Left":
-            head_x -= self.snake_size
-        elif self.direction == "Right":
-            head_x += self.snake_size
-        elif self.direction == "Up":
-            head_y -= self.snake_size
-        elif self.direction == "Down":
-            head_y += self.snake_size
-        new_head = (head_x, head_y)
+        moves = {
+            "Left": (-self.snake_size, 0),
+            "Right": (self.snake_size, 0),
+            "Up": (0, -self.snake_size),
+            "Down": (0, self.snake_size),
+        }
 
-        # Check for collisions
-        if head_x < 0 or head_x >= self.width or head_y < 0 or head_y >= self.height:
+        dx, dy = moves[self.direction]
+        new_head = (head_x + dx, head_y + dy)
+
+        # Check collisions
+        if (
+            new_head[0] < 0
+            or new_head[0] >= self.width
+            or new_head[1] < 0
+            or new_head[1] >= self.height
+            or new_head in self.snake
+        ):
             self.game_over()
             return
-        if new_head in self.snake:
-            self.game_over()
-            return
 
-        self.snake = [new_head] + self.snake
-        if self.food:
-            food_coords = self.canvas.coords(self.food)
-            if self.check_collision(new_head, food_coords):
-                self.score += 1
-                self.update_score()
-                self.spawn_food()
-            else:
-                self.snake.pop()
+        # Add new head
+        self.snake.insert(0, new_head)
 
+        # Check food collision
+        food_coords = self.canvas.coords(self.food)
+        if self.check_food_collision(new_head, food_coords):
+            self.score += 1
+            self.update_score()
+            self.spawn_food()
+            # Slightly increase speed
+            self.game_speed = max(80, self.game_speed - 2)
+        else:
+            self.snake.pop()  # Remove tail
+
+        # Redraw snake
         self.draw_snake()
-        self.after_id = self.after(100, self.game_loop)
 
-    def check_collision(self, head, food_coords):
-        """Checks if the snake head collides with food."""
+        # Schedule next update
+        self.after_id = self.after(self.game_speed, self.game_loop)
+
+    def check_food_collision(self, head, food_coords):
+        """Check if snake head touches food"""
+        if len(food_coords) < 4:
+            return False
+
         x, y = head
         x1, y1, x2, y2 = food_coords
-        return x >= x1 and x < x2 and y >= y1 and y < y2
+        return (
+            x < x2 and x + self.snake_size > x1 and y < y2 and y + self.snake_size > y1
+        )
 
     def game_over(self):
-        """Handles game over state."""
+        """Handle game over efficiently"""
         self.running = False
         self.pause()
-        self.canvas.create_text(self.width//2, self.height//2, text="Game Over!", fill="red",
-                                font=("Helvetica", 16, "bold"))
-        self.restart_button.place(relx=0.5, rely=0.8, anchor="center")
+
+        # Show game over message
+        center_x, center_y = self.width // 2, self.height // 2
+
+        # Background for text
+        bg = self.canvas.create_rectangle(
+            center_x - 80,
+            center_y - 30,
+            center_x + 80,
+            center_y + 30,
+            fill="#2C3E50",
+            outline="#E74C3C",
+            width=2,
+            tags="gameover",
+        )
+
+        # Game over text
+        text = self.canvas.create_text(
+            center_x,
+            center_y,
+            text="Game Over!",
+            fill="#E74C3C",
+            font=("Segoe UI", 14, "bold"),
+            tags="gameover",
+        )
+
+        self.game_over_elements = [bg, text]
+
+        # Show restart button
+        self.start_button.config(text="🔄 Play Again")
+        self.start_button.place(relx=0.5, rely=0.7, anchor="center")
+
+    def clear_game_over(self):
+        """Clear game over elements"""
+        for element in self.game_over_elements:
+            self.canvas.delete(element)
+        self.game_over_elements = []
 
     def pause(self):
-        """Pauses the game."""
+        """Pause the game"""
         self.running = False
         if self.after_id:
             self.after_cancel(self.after_id)
             self.after_id = None
 
     def pause_game(self):
-        """External pause method."""
+        """External pause method for compatibility"""
         self.pause()
 
     def generate_commentary(self, score):
-        """Generates commentary based on the player's score."""
-        if score < 3:
-            return "Ouch! You barely moved!"
-        elif score < 6:
-            return "Not bad, but you can do better!"
-        elif score < 10:
-            return "Nice! Keep it up!"
-        else:
-            return "Incredible! You're a snake master!"
+        """Generate performance commentary"""
+        comments = [
+            (0, "🐌 Baby steps! Every expert was once a beginner."),
+            (3, "🎯 Getting the hang of it! Keep practicing."),
+            (7, "🚀 Nice moves! You're improving quickly."),
+            (12, "🏆 Impressive! You've got real skills."),
+            (20, "🔥 Outstanding! You're a snake charmer!"),
+            (30, "🌟 Legendary! Are you sure you're human?"),
+        ]
+
+        for threshold, comment in reversed(comments):
+            if score >= threshold:
+                return comment
+        return comments[0][1]  # Default to first comment
