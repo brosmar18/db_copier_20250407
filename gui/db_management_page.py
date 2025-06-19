@@ -378,30 +378,106 @@ class DBManagementPage(ttk.Frame):
 
     def clone_database(self):
         """Open dialog for naming and quantity of cloned DBs."""
-        default_name = f"{self.context_menu_db}_copy"
+        import datetime
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d")
+        default_name = f"{self.context_menu_db}_copy_{timestamp}"
         dialog = tk.Toplevel(self)
         dialog.title("🔁 Clone Database")
         dialog.transient(self)
         dialog.grab_set()
 
+        # Apply color schema to dialog
+        dialog.configure(bg="#181F67")  # Navy blue background
+
+        # Setup custom styles for this dialog
+        style = ttk.Style()
+
+        # Dialog-specific frame style
+        style.configure("Dialog.TFrame", background="#181F67", relief="flat")
+
+        # Dialog-specific label style
+        style.configure(
+            "Dialog.TLabel",
+            background="#181F67",
+            foreground="white",
+            font=("Helvetica", 10),
+        )
+
+        # Dialog-specific entry style
+        style.configure(
+            "Dialog.TEntry",
+            font=("Helvetica", 10),
+            fieldbackground="white",
+            borderwidth=1,
+            relief="solid",
+        )
+
+        # Dialog-specific spinbox style
+        style.configure(
+            "Dialog.TSpinbox",
+            font=("Helvetica", 10),
+            fieldbackground="white",
+            borderwidth=1,
+            relief="solid",
+        )
+
+        # Dialog OK button style (green)
+        style.configure(
+            "DialogOK.TButton",
+            background="#7BB837",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(10, 5),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("DialogOK.TButton", background=[("active", "#6AA62F")])
+
+        # Dialog Cancel button style (gray)
+        style.configure(
+            "DialogCancel.TButton",
+            background="#939498",
+            foreground="white",
+            font=("Helvetica", 10, "bold"),
+            padding=(10, 5),
+            borderwidth=0,
+            relief="flat",
+        )
+        style.map("DialogCancel.TButton", background=[("active", "#7A7A7A")])
+
         # Variables
         name_var = tk.StringVar(value=default_name)
         copies_var = tk.IntVar(value=1)
 
-        # Layout
-        ttk.Label(dialog, text="New Database Name:", font=("Helvetica", 10)).grid(
-            row=0, column=0, padx=10, pady=(10, 5), sticky="w"
-        )
-        name_entry = ttk.Entry(dialog, textvariable=name_var, width=30)
-        name_entry.grid(row=0, column=1, padx=10, pady=(10, 5))
+        # Main content frame with styled background
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=25)
+        content_frame.pack(fill="both", expand=True)
 
-        ttk.Label(dialog, text="Number of Copies:", font=("Helvetica", 10)).grid(
-            row=1, column=0, padx=10, pady=5, sticky="w"
+        # Configure grid weights for proper expansion
+        content_frame.columnconfigure(1, weight=1)
+
+        # Layout with styled widgets
+        ttk.Label(content_frame, text="New Database Name:", style="Dialog.TLabel").grid(
+            row=0, column=0, padx=(0, 10), pady=(10, 5), sticky="w"
+        )
+        name_entry = ttk.Entry(
+            content_frame, textvariable=name_var, width=35, style="Dialog.TEntry"
+        )
+        name_entry.grid(row=0, column=1, padx=(0, 10), pady=(10, 5), sticky="ew")
+
+        ttk.Label(content_frame, text="Number of Copies:", style="Dialog.TLabel").grid(
+            row=1, column=0, padx=(0, 10), pady=5, sticky="w"
         )
         copies_spin = ttk.Spinbox(
-            dialog, from_=1, to=100, textvariable=copies_var, width=5
+            content_frame,
+            from_=1,
+            to=100,
+            textvariable=copies_var,
+            width=5,
+            style="Dialog.TSpinbox",
         )
-        copies_spin.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+        copies_spin.grid(row=1, column=1, padx=(0, 10), pady=5, sticky="w")
 
         # Button handlers
         def on_ok():
@@ -417,14 +493,34 @@ class DBManagementPage(ttk.Frame):
         def on_cancel():
             dialog.destroy()
 
-        # Buttons
-        btn_frame = ttk.Frame(dialog)
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(10, 10))
-        ttk.Button(btn_frame, text="OK", command=on_ok).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=on_cancel).pack(
-            side="right", padx=5
-        )
+        # Buttons with styled frame
+        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        btn_frame.grid(row=2, column=0, columnspan=2, pady=(25, 15))
 
-        # Focus
+        ok_btn = ttk.Button(
+            btn_frame, text="OK", command=on_ok, style="DialogOK.TButton"
+        )
+        ok_btn.pack(side="left", padx=15)
+
+        cancel_btn = ttk.Button(
+            btn_frame, text="Cancel", command=on_cancel, style="DialogCancel.TButton"
+        )
+        cancel_btn.pack(side="right", padx=15)
+
+        # Set minimum size and center the dialog
+        dialog.minsize(500, 250)
+        dialog.geometry("500x250")
+
+        # Center dialog on parent window
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
+        y = (
+            self.winfo_rooty()
+            + (self.winfo_height() // 2)
+            - (dialog.winfo_height() // 2)
+        )
+        dialog.geometry(f"+{x}+{y}")
+
+        # Focus and wait
         name_entry.focus()
         dialog.wait_window()
