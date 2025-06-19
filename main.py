@@ -10,137 +10,176 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("DB Manager")
-        self.geometry("800x600")
+        self.geometry("1200x800")  # Increased default size for better UX
+        self.minsize(800, 600)  # Set minimum size
 
-        # Setup custom styles.
-        self.setup_styles()
+        # Performance optimization: Configure window for better rendering
+        self.configure(bg="white")
 
-        # Create Navigation Bar (initially hidden on login)
-        self.nav_bar = ttk.Frame(self, style="Nav.TFrame")
-        self.build_nav_bar()
-        self.nav_bar.grid(row=0, column=0, sticky="ew")
-        self.nav_bar.grid_remove()  # Hide nav bar on login page
+        # Optimize for modern displays
+        try:
+            self.tk.call("tk", "scaling", 1.0)  # Consistent scaling
+        except:
+            pass
 
-        # Container for pages (below the nav bar)
-        self.container = ttk.Frame(self)
-        self.container.grid(row=1, column=0, sticky="nsew")
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
+        # Setup minimal styles first
+        self.setup_minimal_styles()
 
-        # Dictionary to hold pages
-        self.frames = {}
-        for Page in (LoginPage, CopierPage, DBManagementPage, RestorePage):
-            page_name = Page.__name__
-            frame = Page(parent=self.container, controller=self)
-            self.frames[page_name] = frame
-            frame.grid(row=0, column=0, sticky="nsew")
+        # Create basic structure
+        self.setup_basic_structure()
 
-        # Shared state (e.g., credentials)
+        # Shared state
         self.db_credentials = {}
+        self.frames = {}
 
-        # Show the login page initially.
+        # Show login page immediately for faster startup
         self.show_frame("LoginPage")
 
-    def setup_styles(self):
+    def setup_minimal_styles(self):
+        """Setup only essential styles for faster startup"""
         style = ttk.Style()
         style.theme_use("clam")
 
-        # Global widget styles.
+        # Only essential styles - detailed styling done lazily
         style.configure("TFrame", background="white")
-        style.configure("TLabel", background="white", font=("Helvetica", 12))
-        style.configure("TButton", font=("Helvetica", 10), padding=5)
-        style.configure("TEntry", font=("Helvetica", 10), padding=5)
+        style.configure("TLabel", background="white", font=("Segoe UI", 11))
+        style.configure("TButton", font=("Segoe UI", 10))
+        style.configure("TEntry", font=("Segoe UI", 10))
 
-        # Navigation bar styles.
-        style.configure("Nav.TFrame", background="#181F67")
+        # Navigation styles
+        style.configure("Nav.TFrame", background="#2C3E50", relief="flat")
         style.configure(
             "Nav.TLabel",
-            background="#181F67",
+            background="#2C3E50",
             foreground="white",
-            font=("Helvetica", 14, "bold"),
+            font=("Segoe UI", 14, "bold"),
         )
         style.configure(
             "Nav.TButton",
-            background="#7BB837",
+            background="#3498DB",
             foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=5,
+            font=("Segoe UI", 10, "bold"),
         )
-        style.map("Nav.TButton", background=[("active", "#6AA62F")])
+        style.map("Nav.TButton", background=[("active", "#2980B9")])
 
-        # Logout button style.
-        style.configure(
-            "Logout.TButton",
-            background="#939498",
-            foreground="white",
-            font=("Helvetica", 10, "bold"),
-            padding=5,
-        )
-        style.map("Logout.TButton", background=[("active", "#7A7A7A")])
+    def setup_basic_structure(self):
+        """Create basic application structure quickly"""
+        # Configure grid
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # Navigation bar (hidden initially)
+        self.nav_bar = ttk.Frame(self, style="Nav.TFrame", height=50)
+        self.nav_bar.grid(row=0, column=0, sticky="ew")
+        self.nav_bar.grid_remove()
+        self.nav_bar.grid_propagate(False)  # Prevent resizing
+
+        # Container for pages
+        self.container = ttk.Frame(self)
+        self.container.grid(row=1, column=0, sticky="nsew")
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+
+        # Build navigation after idle for better startup
+        self.after_idle(self.build_nav_bar)
 
     def build_nav_bar(self):
-        # Clear existing nav bar widgets.
+        """Build navigation bar lazily"""
+        # Clear existing widgets
         for widget in self.nav_bar.winfo_children():
             widget.destroy()
 
-        # Nav bar title.
+        # Title
         title_label = ttk.Label(
             self.nav_bar, text="PostgreSQL DB Manager", style="Nav.TLabel"
         )
-        title_label.pack(side="left", padx=20, pady=10)
+        title_label.pack(side="left", padx=20, pady=12)
 
-        # Navigation buttons.
+        # Button frame
         btn_frame = ttk.Frame(self.nav_bar, style="Nav.TFrame")
-        btn_frame.pack(side="right", padx=20)
+        btn_frame.pack(side="right", padx=20, pady=8)
 
-        # copier_btn = ttk.Button(
-        #     btn_frame,
-        #     text="Copier",
-        #     style="Nav.TButton",
-        #     command=lambda: self.show_frame("CopierPage"),
-        # )
-        # copier_btn.pack(side="left", padx=5)
+        # Navigation buttons
+        buttons = [
+            ("DB Management", "DBManagementPage"),
+            ("Restore", "RestorePage"),
+            ("Logout", None),  # Special case for logout
+        ]
 
-        db_mgmt_btn = ttk.Button(
-            btn_frame,
-            text="DB Management",
-            style="Nav.TButton",
-            command=lambda: self.show_frame("DBManagementPage"),
-        )
-        db_mgmt_btn.pack(side="left", padx=5)
+        for i, (text, page) in enumerate(buttons):
+            if text == "Logout":
+                btn = ttk.Button(
+                    btn_frame, text=text, command=self.logout, style="Nav.TButton"
+                )
+            else:
+                btn = ttk.Button(
+                    btn_frame,
+                    text=text,
+                    command=lambda p=page: self.show_frame(p),
+                    style="Nav.TButton",
+                )
+            btn.pack(side="left", padx=3)
 
-        restore_btn = ttk.Button(
-            btn_frame,
-            text="Restore",
-            style="Nav.TButton",
-            command=lambda: self.show_frame("RestorePage"),
-        )
-        restore_btn.pack(side="left", padx=5)
-
-        logout_btn = ttk.Button(
-            btn_frame, text="Logout", style="Logout.TButton", command=self.logout
-        )
-        logout_btn.pack(side="left", padx=5)
+    def create_frame(self, page_class):
+        """Create frame lazily when first needed"""
+        page_name = page_class.__name__
+        if page_name not in self.frames:
+            frame = page_class(parent=self.container, controller=self)
+            self.frames[page_name] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
+        return self.frames[page_name]
 
     def show_frame(self, page_name):
-        """Raise the frame corresponding to page_name."""
-        frame = self.frames[page_name]
-        frame.tkraise()
-        frame.event_generate("<<ShowFrame>>")
-        # Show the nav bar for all pages except the login page.
+        """Show frame, creating it if necessary"""
+        # Map page names to classes
+        page_classes = {
+            "LoginPage": LoginPage,
+            "CopierPage": CopierPage,
+            "DBManagementPage": DBManagementPage,
+            "RestorePage": RestorePage,
+        }
+
+        if page_name in page_classes:
+            frame = self.create_frame(page_classes[page_name])
+            frame.tkraise()
+
+            # Generate show frame event
+            try:
+                frame.event_generate("<<ShowFrame>>")
+            except:
+                pass  # Ignore if event generation fails
+
+        # Show/hide navigation
         if page_name == "LoginPage":
             self.nav_bar.grid_remove()
         else:
             self.nav_bar.grid()
 
     def logout(self):
-        """Clear credentials and return to the login page."""
+        """Logout and return to login page"""
+        # Clear credentials
         self.db_credentials = {}
+
+        # Clear any cached frames except login for memory efficiency
+        frames_to_clear = ["DBManagementPage", "CopierPage", "RestorePage"]
+        for frame_name in frames_to_clear:
+            if frame_name in self.frames:
+                self.frames[frame_name].destroy()
+                del self.frames[frame_name]
+
+        # Show login page
         self.show_frame("LoginPage")
+
+    def run(self):
+        """Start the application with error handling"""
+        try:
+            self.mainloop()
+        except Exception as e:
+            messagebox.showerror(
+                "Application Error", f"An unexpected error occurred:\n{str(e)}"
+            )
 
 
 if __name__ == "__main__":
     app = App()
-    app.mainloop()
+    app.run()
