@@ -1187,3 +1187,1120 @@ class DBManagementPage(ttk.Frame):
             self.create_widgets()
         if not self._operation_in_progress:
             self.load_databases_async()
+
+
+
+    def clone_database(self):
+        """Open dialog for naming and quantity of cloned DBs with improved styling"""
+        if not self.context_menu_dbs:
+            return
+
+        if len(self.context_menu_dbs) > 1:
+            messagebox.showwarning(
+                "Clone Limitation",
+                "Please select only one database to clone.\n"
+                f"Currently selected: {len(self.context_menu_dbs)} databases",
+            )
+            return
+
+        source_db = self.context_menu_dbs[0]
+        timestamp = datetime.now().strftime("%Y%m%d")
+        default_name = f"{source_db}_copy_{timestamp}"
+
+        dialog = tk.Toplevel(self)
+        dialog.title("Clone Database")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.configure(bg="#2C3E50")
+
+        # Variables
+        name_var = tk.StringVar(value=default_name)
+        copies_var = tk.IntVar(value=1)
+        self.clone_in_progress = False
+
+        # Main content frame with enhanced styling and larger size
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=50)  # Increased padding
+        content_frame.pack(fill="both", expand=True)
+        content_frame.columnconfigure(1, weight=1)
+
+        # Header with larger font
+        header_label = ttk.Label(
+            content_frame,
+            text="Clone Database",
+            style="DialogHeader.TLabel",
+            font=("Segoe UI", 20, "bold"),  # Increased from 16
+        )
+        header_label.grid(row=0, column=0, columnspan=2, pady=(0, 40))  # Increased padding
+
+        # Layout with styled widgets and improved sizing
+        ttk.Label(
+            content_frame, 
+            text="New Database Name:", 
+            style="Dialog.TLabel",
+            font=("Segoe UI", 14)  # Increased font
+        ).grid(row=1, column=0, padx=(0, 25), pady=(0, 20), sticky="w")  # Increased padding
+
+        name_entry = ttk.Entry(
+            content_frame, 
+            textvariable=name_var, 
+            width=40,  # Increased width
+            font=("Segoe UI", 13)  # Larger font
+        )
+        name_entry.grid(row=1, column=1, pady=(0, 20), sticky="ew")  # Increased padding
+
+        ttk.Label(
+            content_frame, 
+            text="Number of Copies:", 
+            style="Dialog.TLabel",
+            font=("Segoe UI", 14)  # Increased font
+        ).grid(row=2, column=0, padx=(0, 25), pady=(0, 30), sticky="w")  # Increased padding
+
+        copies_spin = ttk.Spinbox(
+            content_frame,
+            from_=1,
+            to=100,
+            textvariable=copies_var,
+            width=15,  # Increased width
+            font=("Segoe UI", 13)  # Larger font
+        )
+        copies_spin.grid(row=2, column=1, pady=(0, 30), sticky="w")  # Increased padding
+
+        # Progress bar (initially hidden) with better styling
+        progress_bar = ttk.Progressbar(content_frame, mode="indeterminate")
+        progress_bar.grid(row=4, column=0, columnspan=2, padx=25, pady=20, sticky="ew")  # Increased padding
+        progress_bar.grid_remove()
+
+        # Status label (initially hidden) with larger font
+        status_label = ttk.Label(
+            content_frame, 
+            text="", 
+            style="Dialog.TLabel",
+            font=("Segoe UI", 12)  # Larger font
+        )
+        status_label.grid(row=5, column=0, columnspan=2, padx=25, pady=15, sticky="w")  # Increased padding
+        status_label.grid_remove()
+
+        # Button handlers
+        def update_status(message):
+            dialog.after(0, lambda: status_label.config(text=message))
+
+        def perform_clone():
+            new_name = name_var.get().strip() or default_name
+            count = copies_var.get()
+            credentials = self.controller.db_credentials
+
+            try:
+                for i in range(count):
+                    if count == 1:
+                        current_name = new_name
+                    else:
+                        current_name = f"{new_name}_{i+1:02d}"
+
+                    update_status(f"Cloning {source_db} to {current_name}...")
+                    copy_database_logic(
+                        credentials, source_db, current_name, update_status
+                    )
+
+                dialog.after(
+                    0, lambda: self.finish_clone_success(dialog, count, new_name)
+                )
+
+            except Exception as e:
+                dialog.after(0, lambda: self.finish_clone_error(dialog, str(e)))
+
+        def on_ok():
+            if self.clone_in_progress:
+                return
+
+            new_name = name_var.get().strip() or default_name
+            count = copies_var.get()
+
+            if not new_name:
+                messagebox.showwarning("Input Error", "Please enter a database name.")
+                return
+
+            self.clone_in_progress = True
+            ok_btn.config(state="disabled")
+            cancel_btn.config(text="Close", state="disabled")
+            name_entry.config(state="disabled")
+            copies_spin.config(state="disabled")
+
+            progress_bar.grid()
+            progress_bar.start(10)
+            status_label.grid()
+            status_label.config(text="Starting clone operation...")
+
+            clone_thread = threading.Thread(target=perform_clone, daemon=True)
+            clone_thread.start()
+
+        def on_cancel():
+            if not self.clone_in_progress:
+                dialog.destroy()
+
+        # Enhanced buttons with better sizing
+        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=(25, 0))  # Increased padding
+
+        ok_btn = ttk.Button(
+            btn_frame, text="Clone Database", command=on_ok, style="Success.TButton"
+        )
+        ok_btn.pack(side="left", padx=25)  # Increased spacing
+
+        cancel_btn = ttk.Button(
+            btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
+        )
+        cancel_btn.pack(side="right", padx=25)  # Increased spacing
+
+        # Set size and center the dialog with better dimensions
+        dialog.withdraw()
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (600 // 2)  # Increased width
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (450 // 2)  # Increased height
+        dialog.geometry(f"600x450+{x}+{y}")  # Larger dialog
+        dialog.deiconify()
+
+        name_entry.focus()
+        dialog.wait_window()
+
+    def rename_database(self):
+        """Open dialog for renaming a database with improved styling"""
+        if not self.context_menu_dbs:
+            return
+
+        if len(self.context_menu_dbs) > 1:
+            messagebox.showwarning(
+                "Rename Limitation",
+                "Please select only one database to rename.\n"
+                f"Currently selected: {len(self.context_menu_dbs)} databases",
+            )
+            return
+
+        source_db = self.context_menu_dbs[0]
+
+        if self.is_protected_database(source_db):
+            messagebox.showwarning(
+                "Protected Database",
+                f"Cannot rename '{source_db}' because it is a protected system database.\n\n"
+                "System databases (postgres, template0, template1) are critical for "
+                "PostgreSQL operation and cannot be renamed.",
+            )
+            return
+
+        dialog = tk.Toplevel(self)
+        dialog.title("Rename Database")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.configure(bg="#2C3E50")
+
+        # Variables
+        new_name_var = tk.StringVar(value=source_db)
+        self.rename_in_progress = False
+
+        # Main content frame with enhanced styling and larger size
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=50)  # Increased padding
+        content_frame.pack(fill="both", expand=True)
+        content_frame.columnconfigure(1, weight=1)
+
+        # Header with larger font
+        header_label = ttk.Label(
+            content_frame,
+            text="Rename Database",
+            style="DialogHeader.TLabel",
+            font=("Segoe UI", 20, "bold"),  # Increased from 16
+        )
+        header_label.grid(row=0, column=0, columnspan=2, pady=(0, 40))  # Increased padding
+
+        # Current database name (read-only) with improved styling
+        ttk.Label(
+            content_frame, 
+            text="Current Name:", 
+            style="Dialog.TLabel",
+            font=("Segoe UI", 14)  # Increased font
+        ).grid(row=1, column=0, padx=(0, 25), pady=(0, 20), sticky="w")  # Increased padding
+
+        current_name_entry = ttk.Entry(
+            content_frame, 
+            width=40,  # Increased width
+            font=("Segoe UI", 13)  # Larger font
+        )
+        current_name_entry.insert(0, source_db)
+        current_name_entry.config(state="readonly")
+        current_name_entry.grid(row=1, column=1, pady=(0, 20), sticky="ew")  # Increased padding
+
+        # New database name entry with improved styling
+        ttk.Label(
+            content_frame, 
+            text="New Name:", 
+            style="Dialog.TLabel",
+            font=("Segoe UI", 14)  # Increased font
+        ).grid(row=2, column=0, padx=(0, 25), pady=(0, 30), sticky="w")  # Increased padding
+
+        new_name_entry = ttk.Entry(
+            content_frame, 
+            textvariable=new_name_var, 
+            width=40,  # Increased width
+            font=("Segoe UI", 13)  # Larger font
+        )
+        new_name_entry.grid(row=2, column=1, pady=(0, 30), sticky="ew")  # Increased padding
+
+        # Progress bar (initially hidden)
+        progress_bar = ttk.Progressbar(content_frame, mode="indeterminate")
+        progress_bar.grid(row=4, column=0, columnspan=2, padx=25, pady=20, sticky="ew")  # Increased padding
+        progress_bar.grid_remove()
+
+        # Status label (initially hidden) with larger font
+        status_label = ttk.Label(
+            content_frame, 
+            text="", 
+            style="Dialog.TLabel",
+            font=("Segoe UI", 12)  # Larger font
+        )
+        status_label.grid(row=5, column=0, columnspan=2, padx=25, pady=15, sticky="w")  # Increased padding
+        status_label.grid_remove()
+
+        # Button handlers
+        def update_status(message):
+            dialog.after(0, lambda: status_label.config(text=message))
+
+        def perform_rename():
+            new_name = new_name_var.get().strip()
+            credentials = self.controller.db_credentials
+
+            try:
+                rename_database(credentials, source_db, new_name, update_status)
+                dialog.after(
+                    0, lambda: self.finish_rename_success(dialog, source_db, new_name)
+                )
+
+            except Exception as e:
+                dialog.after(0, lambda: self.finish_rename_error(dialog, str(e)))
+
+        def on_rename():
+            if self.rename_in_progress:
+                return
+
+            new_name = new_name_var.get().strip()
+
+            if not new_name:
+                messagebox.showwarning(
+                    "Input Error", "Please enter a new database name."
+                )
+                return
+
+            if new_name == source_db:
+                messagebox.showwarning(
+                    "Input Error", "New name must be different from current name."
+                )
+                return
+
+            self.rename_in_progress = True
+            rename_btn.config(state="disabled")
+            cancel_btn.config(text="Close", state="disabled")
+            current_name_entry.config(state="disabled")
+            new_name_entry.config(state="disabled")
+
+            progress_bar.grid()
+            progress_bar.start(10)
+            status_label.grid()
+            status_label.config(text="Starting rename operation...")
+
+            rename_thread = threading.Thread(target=perform_rename, daemon=True)
+            rename_thread.start()
+
+        def on_cancel():
+            if not self.rename_in_progress:
+                dialog.destroy()
+
+        # Enhanced buttons with better sizing
+        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=(25, 0))  # Increased padding
+
+        rename_btn = ttk.Button(
+            btn_frame,
+            text="Rename Database",
+            command=on_rename,
+            style="Warning.TButton",
+        )
+        rename_btn.pack(side="left", padx=25)  # Increased spacing
+
+        cancel_btn = ttk.Button(
+            btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
+        )
+        cancel_btn.pack(side="right", padx=25)  # Increased spacing
+
+        # Set size and center the dialog with better dimensions
+        dialog.withdraw()
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (600 // 2)  # Increased width
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (480 // 2)  # Increased height
+        dialog.geometry(f"600x480+{x}+{y}")  # Larger dialog
+        dialog.deiconify()
+
+        new_name_entry.focus()
+        new_name_entry.select_range(0, tk.END)
+        dialog.wait_window()
+
+    def open_query_interface(self):
+        """Open SQL query interface for the selected database in the right pane."""
+        if not self.context_menu_dbs:
+            return
+
+        if len(self.context_menu_dbs) > 1:
+            messagebox.showwarning(
+                "Query Limitation",
+                "Please select only one database to query.\n"
+                f"Currently selected: {len(self.context_menu_dbs)} databases",
+            )
+            return
+
+        db_name = self.context_menu_dbs[0]
+        self.show_query_view(db_name)
+
+    def delete_database_from_context(self):
+        """Delete selected databases from context menu with improved dialog styling"""
+        all_selected_dbs = self.context_menu_dbs
+        if not all_selected_dbs:
+            return
+
+        deletable_dbs = self.get_deletable_databases(all_selected_dbs)
+        protected_dbs = self.get_protected_databases(all_selected_dbs)
+
+        if not deletable_dbs:
+            self.show_protection_message()
+            return
+
+        if protected_dbs:
+            protected_list = ", ".join(protected_dbs)
+            warning_result = messagebox.showwarning(
+                "Protected Databases Detected",
+                f"The following protected databases will be skipped:\n{protected_list}\n\n"
+                f"Only {len(deletable_dbs)} database(s) will be deleted:\n{', '.join(deletable_dbs)}\n\n"
+                "Do you want to continue with deleting the non-protected databases?",
+                type=messagebox.OKCANCEL,
+            )
+            if warning_result != "ok":
+                return
+
+        db_names = deletable_dbs
+
+        # Create custom confirmation dialog with improved styling
+        dialog = tk.Toplevel(self)
+        dialog.title("Delete Database(s)")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.configure(bg="#2C3E50")
+
+        # Main content frame with enhanced styling and larger size
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=50)  # Increased padding
+        content_frame.pack(fill="both", expand=True)
+
+        # Warning header with larger font
+        if len(db_names) == 1:
+            header_text = "Delete Database"
+            warning_text = (
+                "This will permanently delete the database and all its data.\n"
+                "This action cannot be undone."
+            )
+        else:
+            header_text = f"Delete {len(db_names)} Databases"
+            warning_text = (
+                f"This will permanently delete {len(db_names)} databases and all their data.\n"
+                "This action cannot be undone."
+            )
+
+        header_label = ttk.Label(
+            content_frame,
+            text=header_text,
+            style="DialogHeader.TLabel",
+            font=("Segoe UI", 20, "bold"),  # Increased from 16
+        )
+        header_label.pack(pady=(0, 30))  # Increased padding
+
+        # Database names highlight with better spacing
+        if len(db_names) == 1:
+            db_label = ttk.Label(
+                content_frame, 
+                text=f'"{db_names[0]}"', 
+                style="DialogHighlight.TLabel",
+                font=("Segoe UI", 15, "bold")  # Larger font
+            )
+            db_label.pack(pady=(0, 25))  # Increased padding
+        else:
+            db_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+            db_frame.pack(pady=(0, 25))  # Increased padding
+
+            if len(db_names) <= 3:
+                for db_name in db_names:
+                    db_label = ttk.Label(
+                        db_frame, 
+                        text=f'"{db_name}"', 
+                        style="DialogHighlight.TLabel",
+                        font=("Segoe UI", 13, "bold")  # Larger font
+                    )
+                    db_label.pack(pady=2)  # Added spacing
+            else:
+                for db_name in db_names[:2]:
+                    db_label = ttk.Label(
+                        db_frame, 
+                        text=f'"{db_name}"', 
+                        style="DialogHighlight.TLabel",
+                        font=("Segoe UI", 13, "bold")  # Larger font
+                    )
+                    db_label.pack(pady=2)  # Added spacing
+                more_label = ttk.Label(
+                    db_frame,
+                    text=f"+ {len(db_names) - 2} more...",
+                    style="DialogHighlight.TLabel",
+                    font=("Segoe UI", 13, "bold")  # Larger font
+                )
+                more_label.pack(pady=2)  # Added spacing
+
+        # Warning message with larger font
+        warning_label = ttk.Label(
+            content_frame, 
+            text=warning_text, 
+            style="Dialog.TLabel", 
+            justify="center",
+            font=("Segoe UI", 13)  # Larger font
+        )
+        warning_label.pack(pady=(0, 35))  # Increased padding
+
+        # Button handlers
+        def on_delete():
+            dialog.destroy()
+            self.perform_multiple_database_deletion(db_names)
+
+        def on_cancel():
+            dialog.destroy()
+
+        # Enhanced buttons with better sizing
+        btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        btn_frame.pack(pady=(25, 0))  # Increased padding
+
+        if len(db_names) == 1:
+            delete_text = "Delete Database"
+        else:
+            delete_text = f"Delete All ({len(db_names)})"
+
+        delete_btn = ttk.Button(
+            btn_frame, text=delete_text, command=on_delete, style="Danger.TButton"
+        )
+        delete_btn.pack(side="left", padx=25)  # Increased spacing
+
+        cancel_btn = ttk.Button(
+            btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
+        )
+        cancel_btn.pack(side="right", padx=25)  # Increased spacing
+
+        # Set size and center the dialog with better dimensions
+        min_height = 400 if len(db_names) <= 3 else 450  # Increased height
+        dialog.minsize(550, min_height)  # Increased width
+
+        dialog.withdraw()
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (550 // 2)  # Updated for new width
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (min_height // 2)
+        dialog.geometry(f"550x{min_height}+{x}+{y}")  # Updated dimensions
+        dialog.deiconify()
+
+        cancel_btn.focus()
+        dialog.wait_window()
+
+    def perform_multiple_database_deletion(self, db_names):
+        """Perform deletion of multiple databases in background thread"""
+        def deletion_worker():
+            credentials = self.controller.db_credentials
+            errors = []
+            successful_deletions = []
+
+            for db_name in db_names:
+                try:
+                    terminate_and_delete_database(credentials, db_name)
+                    successful_deletions.append(db_name)
+                except Exception as e:
+                    errors.append(f"{db_name}: {str(e)}")
+
+            self.after(
+                0, lambda: self.finish_multiple_deletion(successful_deletions, errors)
+            )
+
+        threading.Thread(target=deletion_worker, daemon=True).start()
+
+    def show_protection_message(self):
+        """Show information about protected databases"""
+        protected_list = ", ".join(self.get_protected_databases(self.context_menu_dbs))
+        messagebox.showinfo(
+            "Protected System Databases",
+            f"The following databases are protected from modification:\n\n{protected_list}\n\n"
+            "These are critical system databases required for PostgreSQL to function properly. "
+            "They cannot be deleted, renamed, or modified to ensure system stability.",
+        )
+
+    def finish_clone_success(self, dialog, count, base_name):
+        """Handle successful clone completion"""
+        self.clone_in_progress = False
+        if count == 1:
+            message = f"Database '{base_name}' cloned successfully!"
+        else:
+            message = f"{count} database copies created successfully with base name '{base_name}'!"
+
+        messagebox.showinfo("Clone Complete", message)
+        dialog.destroy()
+        self.load_databases_async()
+
+    def finish_clone_error(self, dialog, error_message):
+        """Handle clone operation error"""
+        self.clone_in_progress = False
+        messagebox.showerror(
+            "Clone Error", f"Failed to clone database:\n{error_message}"
+        )
+        dialog.destroy()
+
+    def finish_rename_success(self, dialog, old_name, new_name):
+        """Handle successful rename completion"""
+        self.rename_in_progress = False
+        messagebox.showinfo(
+            "Rename Complete",
+            f"Database '{old_name}' has been successfully renamed to '{new_name}'!",
+        )
+        dialog.destroy()
+        self.load_databases_async()
+
+    def finish_rename_error(self, dialog, error_message):
+        """Handle rename operation error"""
+        self.rename_in_progress = False
+        messagebox.showerror(
+            "Rename Error", f"Failed to rename database:\n{error_message}"
+        )
+        dialog.destroy()
+
+    def finish_multiple_deletion(self, successful_deletions, errors):
+        """Handle completion of multiple database deletions"""
+        self.load_databases_async()
+
+        if errors and successful_deletions:
+            success_msg = f"Successfully deleted: {', '.join(successful_deletions)}"
+            error_msg = f"Failed to delete:\n" + "\n".join(errors)
+            messagebox.showwarning("Partial Success", f"{success_msg}\n\n{error_msg}")
+        elif errors:
+            error_msg = "Failed to delete databases:\n" + "\n".join(errors)
+            messagebox.showerror("Deletion Error", error_msg)
+        else:
+            if len(successful_deletions) == 1:
+                messagebox.showinfo(
+                    "Deletion Complete",
+                    f"Database '{successful_deletions[0]}' has been successfully deleted.",
+                )
+            else:
+                messagebox.showinfo(
+                    "Deletion Complete",
+                    f"{len(successful_deletions)} databases have been successfully deleted.",
+                )
+
+    def execute_query(self):
+        """Execute the SQL query in background thread."""
+        sql_query = self.sql_text.get("1.0", tk.END).strip()
+
+        if not sql_query:
+            messagebox.showwarning(
+                "Empty Query", "Please enter a SQL query to execute."
+            )
+            return
+
+        if not hasattr(self, "query_db_name"):
+            messagebox.showerror("No Database", "No database selected for query.")
+            return
+
+        self.status_label.config(text="Executing query...")
+
+        def query_worker():
+            credentials = self.controller.db_credentials
+            try:
+                result = execute_sql_query(credentials, self.query_db_name, sql_query)
+                self.after(0, lambda: self.display_query_results(result, sql_query))
+            except Exception as e:
+                error_result = {
+                    "success": False,
+                    "message": f"Execution error: {str(e)}",
+                    "execution_time_ms": 0,
+                }
+                self.after(
+                    0, lambda: self.display_query_results(error_result, sql_query)
+                )
+
+        threading.Thread(target=query_worker, daemon=True).start()
+
+    def display_query_results(self, result, original_query):
+        """Display query results in the treeview and add to history."""
+        self.results_tree.delete(*self.results_tree.get_children())
+
+        if result["success"]:
+            status_text = (
+                f"{result['message']} (Execution time: {result['execution_time_ms']}ms)"
+            )
+        else:
+            status_text = result["message"]
+
+        self.status_label.config(text=status_text)
+
+        result_count = result.get("row_count", 0) if result["success"] else 0
+        self.add_to_query_history(original_query, result["success"], result_count)
+
+        if not result["success"]:
+            self.results_tree["columns"] = ("Error",)
+            self.results_tree["show"] = "headings"
+            self.results_tree.heading("Error", text="Error Message")
+            self.results_tree.column("Error", width=800)
+            self.results_tree.insert("", tk.END, values=(result["message"],))
+            return
+
+        if result["query_type"] == "SELECT" and result["columns"]:
+            self.results_tree["columns"] = result["columns"]
+            self.results_tree["show"] = "headings"
+
+            for col in result["columns"]:
+                self.results_tree.heading(col, text=col)
+                self.results_tree.column(col, width=180, minwidth=120)  # Increased widths
+
+            max_rows = 1000
+            rows_to_display = result["rows"][:max_rows]
+
+            for row in rows_to_display:
+                display_row = [str(val) if val is not None else "" for val in row]
+                self.results_tree.insert("", tk.END, values=display_row)
+
+            total_rows = len(result["rows"])
+            if total_rows > max_rows:
+                self.status_label.config(
+                    text=f"{status_text} (Showing {max_rows} of {total_rows} rows)"
+                )
+
+        elif result["query_type"] == "MODIFICATION":
+            self.results_tree["columns"] = ("Result",)
+            self.results_tree["show"] = "headings"
+            self.results_tree.heading("Result", text="Query Result")
+            self.results_tree.column("Result", width=800)
+            self.results_tree.insert("", tk.END, values=(result["message"],))
+
+    def clear_query(self):
+        """Clear the SQL editor."""
+        self.sql_text.delete("1.0", tk.END)
+
+    def format_sql(self):
+        """Format and beautify the SQL in the editor"""
+        try:
+            current_sql = self.sql_text.get("1.0", tk.END).strip()
+
+            if not current_sql:
+                messagebox.showinfo(
+                    "No SQL to Format", "Please enter some SQL code to format."
+                )
+                return
+
+            formatted_sql = sqlparse.format(
+                current_sql,
+                reindent=True,
+                keyword_case="upper",
+                identifier_case="lower",
+                strip_comments=False,
+                indent_width=4,
+                wrap_after=60,
+                comma_first=False,
+                use_space_around_operators=True,
+            )
+
+            lines = formatted_sql.split("\n")
+            formatted_lines = []
+            in_select = False
+            select_items = []
+
+            for line in lines:
+                stripped = line.strip()
+
+                if stripped.upper().startswith("SELECT"):
+                    in_select = True
+                    if len(stripped) > 6:
+                        select_part = stripped[6:].strip()
+                        formatted_lines.append("SELECT")
+                        if select_part:
+                            select_items.append(select_part)
+                    else:
+                        formatted_lines.append("SELECT")
+                    continue
+
+                elif in_select and any(
+                    stripped.upper().startswith(keyword)
+                    for keyword in [
+                        "FROM",
+                        "WHERE",
+                        "GROUP BY",
+                        "HAVING",
+                        "ORDER BY",
+                        "LIMIT",
+                        "UNION",
+                        "JOIN",
+                        "INNER JOIN",
+                        "LEFT JOIN",
+                        "RIGHT JOIN",
+                    ]
+                ):
+                    if select_items:
+                        formatted_lines.extend(self._format_select_items(select_items))
+                        select_items = []
+                    in_select = False
+                    formatted_lines.append(line)
+                    continue
+
+                elif in_select:
+                    if stripped:
+                        select_items.append(stripped)
+                    continue
+
+                else:
+                    formatted_lines.append(line)
+
+            if select_items:
+                formatted_lines.extend(self._format_select_items(select_items))
+
+            final_formatted = "\n".join(formatted_lines)
+            self.sql_text.delete("1.0", tk.END)
+            self.sql_text.insert("1.0", final_formatted)
+            self.status_label.config(text="SQL formatted successfully!")
+
+        except Exception as e:
+            messagebox.showerror("Format Error", f"Failed to format SQL:\n{str(e)}")
+
+    def _format_select_items(self, items):
+        """Helper method to format SELECT items with proper indentation."""
+        formatted_items = []
+        all_items = " ".join(items)
+        columns = [col.strip() for col in all_items.split(",") if col.strip()]
+
+        for i, column in enumerate(columns):
+            column = " ".join(column.split())
+            if i == len(columns) - 1:
+                formatted_items.append(f"    {column}")
+            else:
+                formatted_items.append(f"    {column},")
+
+        return formatted_items
+
+    def add_to_query_history(self, query, success, result_count=0):
+        """Add a query to the history for the current database"""
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+
+        if db_name not in self.query_history:
+            self.query_history[db_name] = []
+
+        history_entry = {
+            "timestamp": datetime.now(),
+            "query": query.strip(),
+            "success": success,
+            "result_count": result_count,
+        }
+
+        self.query_history[db_name].insert(0, history_entry)
+
+        if len(self.query_history[db_name]) > 100:
+            self.query_history[db_name] = self.query_history[db_name][:100]
+
+        if self.current_view == "query":
+            self.load_query_history()
+
+    def create_smart_query_preview(self, query, max_length=80):  # Increased from 65
+        """Create an intelligent preview of the SQL query"""
+        lines = [line.strip() for line in query.strip().split("\n")]
+        lines = [line for line in lines if line and not line.startswith("--")]
+
+        if not lines:
+            return "Empty query"
+
+        clean_query = " ".join(lines)
+        clean_query = " ".join(clean_query.split())
+        upper_query = clean_query.upper()
+
+        try:
+            if upper_query.startswith("SELECT"):
+                return self._create_select_preview(clean_query, max_length)
+            elif upper_query.startswith("INSERT"):
+                return self._create_insert_preview(clean_query, max_length)
+            elif upper_query.startswith("UPDATE"):
+                return self._create_update_preview(clean_query, max_length)
+            elif upper_query.startswith("DELETE"):
+                return self._create_delete_preview(clean_query, max_length)
+            elif upper_query.startswith("CREATE"):
+                return self._create_create_preview(clean_query, max_length)
+            elif upper_query.startswith("ALTER"):
+                return self._create_alter_preview(clean_query, max_length)
+            elif upper_query.startswith("DROP"):
+                return self._create_drop_preview(clean_query, max_length)
+            else:
+                return self._truncate_query(clean_query, max_length)
+        except:
+            return self._truncate_query(clean_query, max_length)
+
+    def _create_select_preview(self, query, max_length):
+        """Create preview for SELECT statements"""
+        upper_query = query.upper()
+        from_pos = upper_query.find(" FROM ")
+
+        if from_pos == -1:
+            return self._truncate_query(query, max_length)
+
+        select_part = query[6:from_pos].strip()
+        after_from = query[from_pos + 6 :].strip()
+        table_parts = after_from.split()
+        table_name = table_parts[0] if table_parts else "table"
+
+        columns = " ".join(select_part.split())
+
+        if "*" in columns:
+            column_preview = "*"
+        elif "," in columns:
+            col_list = [col.strip() for col in columns.split(",")]
+            if len(col_list) <= 2:
+                column_preview = columns
+            else:
+                column_preview = f"{col_list[0]}, {col_list[1]}, ..."
+        else:
+            column_preview = columns
+
+        if len(column_preview) > 30:  # Increased from 25
+            column_preview = column_preview[:27] + "..."
+
+        preview = f"SELECT {column_preview} FROM {table_name}"
+        return self._truncate_query(preview, max_length)
+
+    def _create_insert_preview(self, query, max_length):
+        """Create preview for INSERT statements"""
+        upper_query = query.upper()
+        into_pos = upper_query.find(" INTO ")
+
+        if into_pos == -1:
+            return self._truncate_query(query, max_length)
+
+        after_into = query[into_pos + 6 :].strip()
+        table_parts = after_into.split()
+        table_name = table_parts[0] if table_parts else "table"
+
+        if "VALUES" in upper_query:
+            preview = f"INSERT INTO {table_name} VALUES"
+        elif "SELECT" in upper_query:
+            preview = f"INSERT INTO {table_name} SELECT"
+        else:
+            preview = f"INSERT INTO {table_name}"
+
+        return self._truncate_query(preview, max_length)
+
+    def _create_update_preview(self, query, max_length):
+        """Create preview for UPDATE statements"""
+        parts = query.split()
+        if len(parts) >= 2:
+            table_name = parts[1]
+            preview = f"UPDATE {table_name} SET"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _create_delete_preview(self, query, max_length):
+        """Create preview for DELETE statements"""
+        upper_query = query.upper()
+        from_pos = upper_query.find(" FROM ")
+
+        if from_pos == -1:
+            return self._truncate_query(query, max_length)
+
+        after_from = query[from_pos + 6 :].strip()
+        table_parts = after_from.split()
+        table_name = table_parts[0] if table_parts else "table"
+
+        preview = f"DELETE FROM {table_name}"
+        return self._truncate_query(preview, max_length)
+
+    def _create_create_preview(self, query, max_length):
+        """Create preview for CREATE statements"""
+        parts = query.split()
+        if len(parts) >= 3:
+            object_type = parts[1].upper()
+            object_name = parts[2]
+            preview = f"CREATE {object_type} {object_name}"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _create_alter_preview(self, query, max_length):
+        """Create preview for ALTER statements"""
+        parts = query.split()
+        if len(parts) >= 3:
+            object_type = parts[1].upper()
+            object_name = parts[2]
+            preview = f"ALTER {object_type} {object_name}"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _create_drop_preview(self, query, max_length):
+        """Create preview for DROP statements"""
+        parts = query.split()
+        if len(parts) >= 3:
+            object_type = parts[1].upper()
+            object_name = parts[2]
+            preview = f"DROP {object_type} {object_name}"
+            return self._truncate_query(preview, max_length)
+
+        return self._truncate_query(query, max_length)
+
+    def _truncate_query(self, query, max_length):
+        """Truncate query with ellipsis if needed"""
+        if len(query) <= max_length:
+            return query
+        else:
+            return query[: max_length - 3] + "..."
+
+    def load_query_history(self):
+        """Load and display query history for current database"""
+        self.history_tree.delete(*self.history_tree.get_children())
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+
+        if db_name not in self.query_history:
+            return
+
+        for entry in self.query_history[db_name]:
+            time_str = entry["timestamp"].strftime("%H:%M:%S")
+            preview = self.create_smart_query_preview(entry["query"])
+            status = "Success" if entry["success"] else "Error"
+            rows = str(entry["result_count"]) if entry["success"] else "-"
+
+            self.history_tree.insert(
+                "", tk.END, values=(time_str, preview, status, rows)
+            )
+
+    def load_query_from_history(self, event):
+        """Load selected query from history into editor (double-click)"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        query = self.query_history[db_name][index]["query"]
+        self.sql_text.delete("1.0", tk.END)
+        self.sql_text.insert("1.0", query)
+        self.query_notebook.select(0)
+        self.sql_text.focus()
+
+    def show_history_context_menu(self, event):
+        """Show context menu for history items"""
+        item = self.history_tree.identify_row(event.y)
+        if item:
+            self.history_tree.selection_set(item)
+            try:
+                self.history_context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                self.history_context_menu.grab_release()
+
+    def copy_query_to_editor(self):
+        """Copy selected query from history to editor"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        query = self.query_history[db_name][index]["query"]
+        self.sql_text.delete("1.0", tk.END)
+        self.sql_text.insert("1.0", query)
+        self.query_notebook.select(0)
+        self.sql_text.focus()
+
+    def copy_query_to_clipboard(self):
+        """Copy selected query from history to clipboard"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        query = self.query_history[db_name][index]["query"]
+        self.clipboard_clear()
+        self.clipboard_append(query)
+        self.status_label.config(text="Query copied to clipboard")
+
+    def remove_from_history(self):
+        """Remove selected query from history"""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        item = selection[0]
+        index = self.history_tree.index(item)
+
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+        if db_name not in self.query_history or index >= len(
+            self.query_history[db_name]
+        ):
+            return
+
+        del self.query_history[db_name][index]
+        self.load_query_history()
+        self.status_label.config(text="Query removed from history")
+
+    def clear_query_history(self):
+        """Clear all query history for current database"""
+        if not hasattr(self, "query_db_name"):
+            return
+
+        db_name = self.query_db_name
+
+        result = messagebox.askyesno(
+            "Clear History",
+            f"Are you sure you want to clear all query history for database '{db_name}'?\n\nThis action cannot be undone.",
+            icon="warning",
+        )
+
+        if result:
+            if db_name in self.query_history:
+                self.query_history[db_name] = []
+
+            self.load_query_history()
+            self.status_label.config(text="Query history cleared")
