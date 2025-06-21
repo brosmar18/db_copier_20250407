@@ -95,8 +95,12 @@ class LoginPage(ttk.Frame):
         self.entry_password.grid(row=4, column=1, padx=15, pady=12)
         self.entry_password.bind("<Return>", self.on_enter_pressed)
 
-        # Connect button with new color scheme
+        # Connect button with comprehensive new color scheme styling
         style = ttk.Style()
+        
+        # Ensure the theme is set properly
+        style.theme_use("clam")
+        
         style.configure(
             "Login.TButton",
             font=("Segoe UI", 14, "bold"),
@@ -104,9 +108,21 @@ class LoginPage(ttk.Frame):
             background="#7BB837",  # New green
             foreground="white",
             borderwidth=0,
-            relief="flat"
+            relief="flat",
+            focuscolor="none",
+            # Additional properties to ensure proper rendering
+            compound="center",
+            anchor="center"
         )
-        style.map("Login.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
+        style.map(
+            "Login.TButton", 
+            background=[
+                ("active", "#6FA02E"),      # Darker green on hover
+                ("pressed", "#5F8A26")      # Even darker green when pressed
+            ],
+            foreground=[("active", "white"), ("pressed", "white")],
+            relief=[("pressed", "flat"), ("!pressed", "flat")]
+        )
         
         button_connect = ttk.Button(
             content_frame, 
