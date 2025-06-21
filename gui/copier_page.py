@@ -62,17 +62,18 @@ class CopierPage(ttk.Frame):
         )
         self.db_combo.grid(row=1, column=1, padx=8, pady=15, sticky="ew")
 
-        # Refresh button with new color scheme
+        # Refresh button with consistent styling
         style.configure(
             "Refresh.TButton",
             font=("Segoe UI", 12, "bold"),
             padding=(20, 12),
-            background="#939498",  # New gray
+            background="#7BB837",  # Green to match navigation
             foreground="white",
             borderwidth=0,
-            relief="flat"
+            relief="flat",
+            focuscolor="none"
         )
-        style.map("Refresh.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
+        style.map("Refresh.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
         
         self.refresh_btn = ttk.Button(
             content_frame, 

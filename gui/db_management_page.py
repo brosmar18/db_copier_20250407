@@ -194,10 +194,10 @@ class DBManagementPage(ttk.Frame):
             "Accent.TButton", background=[("active", "#0F1A4D"), ("pressed", "#0C1540")]
         )
 
-        # Compact button style for headers
+        # Compact button style for headers with better styling
         style.configure(
             "Compact.TButton",
-            background="#939498",  # New gray
+            background="#7BB837",  # Changed from gray to green
             foreground="white",
             font=("Segoe UI", 11, "bold"),
             padding=(15, 12),
@@ -207,7 +207,7 @@ class DBManagementPage(ttk.Frame):
         )
         style.map(
             "Compact.TButton",
-            background=[("active", "#7A7A7E"), ("pressed", "#6A6A6E")],
+            background=[("active", "#6FA02E"), ("pressed", "#5F8A26")],  # Green variants
         )
 
         # Query interface styles
@@ -264,6 +264,9 @@ class DBManagementPage(ttk.Frame):
         # Configure styles first
         self.configure_styles()
 
+        # Ensure all button styles are properly set
+        self.setup_additional_button_styles()
+
         # Create left panel
         self.create_left_panel()
 
@@ -274,6 +277,42 @@ class DBManagementPage(ttk.Frame):
         self.after_idle(lambda: self.main_paned.sashpos(0, 400))
 
         self._widgets_created = True
+
+    def setup_additional_button_styles(self):
+        """Setup additional button styles to ensure consistency"""
+        style = ttk.Style()
+        
+        # Refresh button style
+        style.configure(
+            "Refresh.TButton",
+            background="#7BB837",  # Green
+            foreground="white",
+            font=("Segoe UI", 11, "bold"),
+            padding=(15, 10),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none"
+        )
+        style.map(
+            "Refresh.TButton",
+            background=[("active", "#6FA02E"), ("pressed", "#5F8A26")]
+        )
+
+        # Make sure all standard buttons follow the theme
+        style.configure(
+            "TButton",
+            background="#7BB837",  # Default to green
+            foreground="white",
+            font=("Segoe UI", 11, "bold"),
+            padding=(15, 10),
+            borderwidth=0,
+            relief="flat",
+            focuscolor="none"
+        )
+        style.map(
+            "TButton",
+            background=[("active", "#6FA02E"), ("pressed", "#5F8A26")]
+        )
 
     def create_left_panel(self):
         """Create the left panel with new color scheme"""
@@ -302,7 +341,7 @@ class DBManagementPage(ttk.Frame):
             left_header,
             text="Refresh",
             command=self.load_databases_async,
-            style="Compact.TButton",
+            style="Refresh.TButton",  # Use the new refresh style
         )
         refresh_btn.pack(side="right", padx=(15, 0))
 
@@ -448,7 +487,7 @@ class DBManagementPage(ttk.Frame):
             header_frame_right,
             text="Refresh Tables",
             command=self.back_to_tables,
-            style="Compact.TButton",
+            style="Refresh.TButton",  # Use consistent refresh styling
         )
         self.back_button.pack(side="right")
         self.back_button.grid_remove()
@@ -763,6 +802,53 @@ class DBManagementPage(ttk.Frame):
             label="Remove from History", command=self.remove_from_history
         )
 
+    # All the async and functional methods remain the same, just adding placeholders
+    def load_databases_async(self): pass
+    def update_database_list(self, databases, load_time): pass
+    def on_db_select_async(self, event): pass
+    def update_db_details(self, details, tables): pass
+    def on_item_select_async(self, event): pass
+    def update_table_details(self, td, cols): pass
+    def filter_databases_debounced(self, event): pass
+    def filter_databases_if_current(self, filter_time): pass
+    def filter_databases(self): pass
+    def filter_items_debounced(self, event): pass
+    def filter_items(self): pass
+    def clear_details(self): pass
+    def populate_items(self, items, header="Table Name"): pass
+    def back_to_tables(self): pass
+    def show_normal_view(self): pass
+    def show_query_view(self, db_name): pass
+    def is_protected_database(self, db_name): pass
+    def get_deletable_databases(self, db_names): pass
+    def get_protected_databases(self, db_names): pass
+    def show_db_context_menu(self, event): pass
+    def show_db_context_menu_keyboard(self, event): pass
+    def update_context_menu_labels(self, count): pass
+    def clone_database(self): pass
+    def rename_database(self): pass
+    def open_query_interface(self): pass
+    def delete_database_from_context(self): pass
+    def show_protection_message(self): pass
+    def execute_query(self): pass
+    def display_query_results(self, result, original_query): pass
+    def clear_query(self): pass
+    def format_sql(self): pass
+    def add_to_query_history(self, query, success, result_count=0): pass
+    def load_query_history(self): pass
+    def load_query_from_history(self, event): pass
+    def show_history_context_menu(self, event): pass
+    def copy_query_to_editor(self): pass
+    def copy_query_to_clipboard(self): pass
+    def remove_from_history(self): pass
+    def clear_query_history(self): pass
+
+    def on_show_frame(self, event):
+        """Handle frame show event for lazy initialization"""
+        if not self._widgets_created:
+            self.create_widgets()
+        if not self._operation_in_progress:
+            self.load_databases_async()
     # === PERFORMANCE OPTIMIZED ASYNC METHODS (keeping all original functionality) ===
 
     def load_databases_async(self):
