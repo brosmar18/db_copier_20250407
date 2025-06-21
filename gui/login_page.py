@@ -23,7 +23,7 @@ class LoginPage(ttk.Frame):
         # Use StringVar for each field with default values.
         self.host_var = tk.StringVar(value="localhost")
         self.port_var = tk.StringVar(value="5432")
-        self.user_var = tk.StringVar(value="brosmar")
+        self.user_var = tk.StringVar(value="postgres")
         self.password_var = tk.StringVar()
 
         # Host field
