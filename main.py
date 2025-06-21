@@ -36,35 +36,38 @@ class App(tk.Tk):
         self.show_frame("LoginPage")
 
     def setup_minimal_styles(self):
-        """Setup only essential styles for faster startup with improved readability"""
+        """Setup only essential styles for faster startup with new color scheme"""
         style = ttk.Style()
         style.theme_use("clam")
 
-        # Improved base styles with larger fonts
+        # Improved base styles with larger fonts and new colors
         style.configure("TFrame", background="white")
-        style.configure("TLabel", background="white", font=("Segoe UI", 13))  # Increased from 11
-        style.configure("TButton", font=("Segoe UI", 12), padding=(12, 8))  # Increased from 10
-        style.configure("TEntry", font=("Segoe UI", 12), padding=8)  # Increased from 10
+        style.configure("TLabel", background="white", font=("Segoe UI", 13))
+        style.configure("TButton", font=("Segoe UI", 12), padding=(12, 8))
+        style.configure("TEntry", font=("Segoe UI", 12), padding=8)
 
-        # Navigation styles with better visibility
-        style.configure("Nav.TFrame", background="#2C3E50", relief="flat")
+        # Navigation styles with new color scheme
+        style.configure("Nav.TFrame", background="#181F67", relief="flat")  # New dark blue
         style.configure(
             "Nav.TLabel",
-            background="#2C3E50",
+            background="#181F67",  # New dark blue
             foreground="white",
-            font=("Segoe UI", 16, "bold"),  # Increased from 14
-            padding=(0, 15)  # Added vertical padding
+            font=("Segoe UI", 16, "bold"),
+            padding=(0, 15)
         )
         style.configure(
             "Nav.TButton",
-            background="#3498DB",
+            background="#7BB837",  # New green
             foreground="white",
-            font=("Segoe UI", 12, "bold"),  # Increased from 10
-            padding=(20, 12),  # Increased padding
+            font=("Segoe UI", 12, "bold"),
+            padding=(20, 12),
             borderwidth=0,
-            relief="flat"
+            relief="flat",
+            focuscolor="none"
         )
-        style.map("Nav.TButton", background=[("active", "#2980B9")])
+        style.map("Nav.TButton", 
+                 background=[("active", "#6FA02E"), ("pressed", "#5F8A26")],  # Darker greens
+                 relief=[("pressed", "flat"), ("!pressed", "flat")])  # Keep flat appearance
 
     def setup_basic_structure(self):
         """Create basic application structure quickly"""
@@ -72,11 +75,11 @@ class App(tk.Tk):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        # Navigation bar with increased height
-        self.nav_bar = ttk.Frame(self, style="Nav.TFrame", height=70)  # Increased from 50
+        # Navigation bar with increased height and new color
+        self.nav_bar = ttk.Frame(self, style="Nav.TFrame", height=70)
         self.nav_bar.grid(row=0, column=0, sticky="ew")
         self.nav_bar.grid_remove()
-        self.nav_bar.grid_propagate(False)  # Prevent resizing
+        self.nav_bar.grid_propagate(False)
 
         # Container for pages
         self.container = ttk.Frame(self)
@@ -88,7 +91,7 @@ class App(tk.Tk):
         self.after_idle(self.build_nav_bar)
 
     def build_nav_bar(self):
-        """Build navigation bar lazily with improved sizing"""
+        """Build navigation bar lazily with improved sizing and new colors"""
         # Clear existing widgets
         for widget in self.nav_bar.winfo_children():
             widget.destroy()
@@ -97,17 +100,17 @@ class App(tk.Tk):
         title_label = ttk.Label(
             self.nav_bar, text="PostgreSQL DB Manager", style="Nav.TLabel"
         )
-        title_label.pack(side="left", padx=30, pady=15)  # Increased padding
+        title_label.pack(side="left", padx=30, pady=15)
 
         # Button frame
         btn_frame = ttk.Frame(self.nav_bar, style="Nav.TFrame")
-        btn_frame.pack(side="right", padx=30, pady=12)  # Increased padding
+        btn_frame.pack(side="right", padx=30, pady=12)
 
         # Navigation buttons with better spacing
         buttons = [
             ("DB Management", "DBManagementPage"),
             ("Restore", "RestorePage"),
-            ("Logout", None),  # Special case for logout
+            ("Logout", None),
         ]
 
         for i, (text, page) in enumerate(buttons):
@@ -122,7 +125,7 @@ class App(tk.Tk):
                     command=lambda p=page: self.show_frame(p),
                     style="Nav.TButton",
                 )
-            btn.pack(side="left", padx=8)  # Increased spacing between buttons
+            btn.pack(side="left", padx=8)
 
     def create_frame(self, page_class):
         """Create frame lazily when first needed"""
@@ -151,7 +154,7 @@ class App(tk.Tk):
             try:
                 frame.event_generate("<<ShowFrame>>")
             except:
-                pass  # Ignore if event generation fails
+                pass
 
         # Show/hide navigation
         if page_name == "LoginPage":
