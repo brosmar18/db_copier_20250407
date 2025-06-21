@@ -15,93 +15,140 @@ class CopierPage(ttk.Frame):
         self.bind("<<ShowFrame>>", self.on_show_frame)
 
     def create_widgets(self):
-        """Create widgets lazily for better startup performance"""
+        """Create widgets lazily for better startup performance with new color scheme"""
         if self._widgets_created:
             return
 
-        # Simple progress bar style
+        # Progress bar style with new color scheme
         style = ttk.Style(self)
         style.configure(
-            "Copy.Horizontal.TProgressbar", troughcolor="#E8E8E8", background="#27AE60"
+            "Copy.Horizontal.TProgressbar", 
+            troughcolor="#E8E8E8", 
+            background="#7BB837",  # New green
+            borderwidth=2
         )
 
-        # Main container
-        main_frame = ttk.Frame(self, padding=40)
+        # Main container with increased padding
+        main_frame = ttk.Frame(self, padding=50)
         main_frame.pack(expand=True, fill="both")
 
         # Center content frame
         content_frame = ttk.Frame(main_frame)
         content_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Title
+        # Title with new color scheme
         title = ttk.Label(
-            content_frame, text="Database Copier", font=("Segoe UI", 18, "bold")
+            content_frame, 
+            text="Database Copier", 
+            font=("Segoe UI", 24, "bold"),
+            foreground="#181F67"  # New dark blue
         )
-        title.grid(row=0, column=0, columnspan=3, pady=(0, 30))
+        title.grid(row=0, column=0, columnspan=3, pady=(0, 40))
 
-        # Source database selection
+        # Source database selection with new color scheme
         ttk.Label(
-            content_frame, text="Source Database:", font=("Segoe UI", 11, "bold")
-        ).grid(row=1, column=0, padx=(0, 15), pady=10, sticky="w")
+            content_frame, 
+            text="Source Database:", 
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=1, column=0, padx=(0, 20), pady=15, sticky="w")
 
         self.db_combo = ttk.Combobox(
-            content_frame, state="readonly", font=("Segoe UI", 11), width=35
+            content_frame, 
+            state="readonly", 
+            font=("Segoe UI", 13),
+            width=40,
+            height=8
         )
-        self.db_combo.grid(row=1, column=1, padx=5, pady=10, sticky="ew")
+        self.db_combo.grid(row=1, column=1, padx=8, pady=15, sticky="ew")
 
-        # Refresh button
+        # Refresh button with new color scheme
+        style.configure(
+            "Refresh.TButton",
+            font=("Segoe UI", 12, "bold"),
+            padding=(20, 12),
+            background="#939498",  # New gray
+            foreground="white",
+            borderwidth=0,
+            relief="flat"
+        )
+        style.map("Refresh.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
+        
         self.refresh_btn = ttk.Button(
-            content_frame, text="Refresh", command=self.refresh_databases
+            content_frame, 
+            text="Refresh", 
+            command=self.refresh_databases,
+            style="Refresh.TButton"
         )
-        self.refresh_btn.grid(row=1, column=2, padx=(15, 0), pady=10)
+        self.refresh_btn.grid(row=1, column=2, padx=(20, 0), pady=15)
 
-        # New database name
+        # New database name with new color scheme
         ttk.Label(
-            content_frame, text="New Database Name:", font=("Segoe UI", 11, "bold")
-        ).grid(row=2, column=0, padx=(0, 15), pady=10, sticky="w")
+            content_frame, 
+            text="New Database Name:", 
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=2, column=0, padx=(0, 20), pady=15, sticky="w")
 
-        self.new_db_entry = ttk.Entry(content_frame, font=("Segoe UI", 11), width=35)
-        self.new_db_entry.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
+        self.new_db_entry = ttk.Entry(
+            content_frame, 
+            font=("Segoe UI", 13),
+            width=40
+        )
+        self.new_db_entry.grid(row=2, column=1, padx=8, pady=15, sticky="ew")
 
-        # Copy button
+        # Copy button with new color scheme
+        style.configure(
+            "CopyAccent.TButton",
+            background="#7BB837",  # New green
+            foreground="white",
+            font=("Segoe UI", 14, "bold"),
+            padding=(35, 18),
+            borderwidth=0,
+            relief="flat"
+        )
+        style.map("CopyAccent.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
+
         self.copy_btn = ttk.Button(
             content_frame,
             text="Copy Database",
             command=self.start_copy,
-            style="Accent.TButton",
+            style="CopyAccent.TButton",
         )
-        self.copy_btn.grid(row=3, column=0, columnspan=3, pady=20)
+        self.copy_btn.grid(row=3, column=0, columnspan=3, pady=30)
 
-        # Progress section (initially hidden)
+        # Progress section with new color scheme
         self.progress_frame = ttk.Frame(content_frame)
         self.progress_frame.grid(
-            row=4, column=0, columnspan=3, pady=(20, 0), sticky="ew"
+            row=4, column=0, columnspan=3, pady=(30, 0), sticky="ew"
         )
+
+        # Progress label with new color scheme
+        progress_label = ttk.Label(
+            self.progress_frame,
+            text="Copy Progress:",
+            font=("Segoe UI", 13, "bold"),
+            foreground="#181F67"  # New dark blue
+        )
+        progress_label.pack(anchor="w", pady=(0, 8))
 
         self.progress_bar = ttk.Progressbar(
             self.progress_frame,
             mode="indeterminate",
             style="Copy.Horizontal.TProgressbar",
         )
-        self.progress_bar.pack(fill="x", pady=(0, 10))
+        self.progress_bar.pack(fill="x", pady=(0, 15))
 
         self.status_label = ttk.Label(
-            self.progress_frame, text="", font=("Segoe UI", 10), foreground="#2C3E50"
+            self.progress_frame, 
+            text="", 
+            font=("Segoe UI", 12),
+            foreground="#181F67"  # New dark blue
         )
-        self.status_label.pack()
+        self.status_label.pack(anchor="w")
 
         # Hide progress initially
         self.progress_frame.grid_remove()
-
-        # Configure button style
-        style.configure(
-            "Accent.TButton",
-            background="#3498DB",
-            foreground="white",
-            font=("Segoe UI", 11, "bold"),
-            padding=(25, 10),
-        )
-        style.map("Accent.TButton", background=[("active", "#2980B9")])
 
         self._widgets_created = True
 
@@ -211,7 +258,7 @@ class CopierPage(ttk.Frame):
     def show_progress(self, message):
         """Show progress bar and status"""
         self.progress_frame.grid()
-        self.progress_bar.start(8)  # Slower animation for better performance
+        self.progress_bar.start(8)
         self.status_label.config(text=message)
 
     def hide_progress(self):

@@ -3,7 +3,7 @@ import random
 
 
 class SnakeGame(tk.Frame):
-    def __init__(self, parent, width=300, height=200):
+    def __init__(self, parent, width=400, height=280):
         super().__init__(parent)
         self.parent = parent
         self.width = width
@@ -12,68 +12,71 @@ class SnakeGame(tk.Frame):
         self.high_score = 0
         self.running = False
         self.after_id = None
-        self.snake_size = 12  # Slightly larger for better performance
+        self.snake_size = 16
         self.snake = []
         self.direction = "Right"
         self.food = None
-        self.game_speed = 150  # Slower for better performance
+        self.game_speed = 180
 
-        # Performance optimization: reduce update frequency
+        # Performance optimization
         self.last_direction_change = 0
 
         self.create_widgets()
 
     def create_widgets(self):
-        """Create game widgets efficiently"""
-        # Canvas with optimized settings
+        """Create game widgets with new color scheme"""
+        # Canvas with new color scheme
         self.canvas = tk.Canvas(
             self,
             width=self.width,
             height=self.height,
-            bg="#2C3E50",
-            highlightthickness=0,
-            relief="flat",
-            borderwidth=0,
+            bg="#181F67",  # New dark blue background
+            highlightthickness=2,
+            highlightbackground="#939498",  # New gray border
+            relief="solid",
+            borderwidth=1,
         )
-        self.canvas.pack(fill="both", expand=True)
+        self.canvas.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Score display
+        # Score display with new color scheme
         self.score_label = tk.Label(
             self,
             text=f"Score: {self.score} | Best: {self.high_score}",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 13, "bold"),
             fg="white",
-            bg="#34495E",
+            bg="#939498",  # New gray background
             relief="flat",
+            padx=15,
+            pady=8
         )
-        self.score_label.pack(fill="x", ipady=5)
+        self.score_label.pack(fill="x")
 
-        # Start button
+        # Start button with new color scheme
         self.start_button = tk.Button(
             self,
             text="🎮 Start Game",
             command=self.start_game,
-            font=("Segoe UI", 12, "bold"),
-            bg="#27AE60",
+            font=("Segoe UI", 14, "bold"),
+            bg="#7BB837",  # New green background
             fg="white",
             relief="flat",
             borderwidth=0,
-            activebackground="#229954",
+            activebackground="#6FA02E",  # Darker green on hover
+            padx=25,
+            pady=12
         )
         self.start_button.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Game over elements (created but hidden)
+        # Game over elements
         self.game_over_elements = []
 
-        # Bind keys efficiently
+        # Bind keys
         self.bind_keys()
 
     def bind_keys(self):
         """Bind keyboard events efficiently"""
-        # Use focus_set to ensure key events are captured
         self.focus_set()
 
-        # Bind arrow keys and WASD
         keys = {
             "<Left>": "Left",
             "<a>": "Left",
@@ -98,15 +101,13 @@ class SnakeGame(tk.Frame):
         self.running = True
         self.start_button.place_forget()
         self.clear_game_over()
-        self.focus_set()  # Ensure focus for key events
+        self.focus_set()
         self.game_loop()
 
     def reset_game(self):
         """Reset game state efficiently"""
-        # Clear canvas efficiently
         self.canvas.delete("all")
 
-        # Reset game state
         center_x = (self.width // 2) // self.snake_size * self.snake_size
         center_y = (self.height // 2) // self.snake_size * self.snake_size
         self.snake = [(center_x, center_y)]
@@ -125,34 +126,40 @@ class SnakeGame(tk.Frame):
         self.score_label.config(text=f"Score: {self.score} | Best: {self.high_score}")
 
     def draw_snake(self):
-        """Draw snake efficiently using rectangles"""
+        """Draw snake with new color scheme"""
         self.canvas.delete("snake")
 
         for i, (x, y) in enumerate(self.snake):
-            # Use different color for head
-            color = "#2ECC71" if i == 0 else "#27AE60"
+            if i == 0:
+                # Head - bright green with darker border
+                color = "#7BB837"  # New green
+                outline = "#6FA02E"  # Darker green
+            else:
+                # Body - slightly darker green with border
+                color = "#6FA02E"  # Darker green
+                outline = "#5F8A26"  # Even darker green
+            
             self.canvas.create_rectangle(
                 x,
                 y,
                 x + self.snake_size,
                 y + self.snake_size,
                 fill=color,
-                outline="",
+                outline=outline,
+                width=2,
                 tags="snake",
             )
 
     def spawn_food(self):
-        """Spawn food at random valid location"""
+        """Spawn food with new color scheme"""
         if self.food:
             self.canvas.delete(self.food)
 
-        # Calculate grid positions for consistent placement
         max_x = (self.width - self.snake_size) // self.snake_size
         max_y = (self.height - self.snake_size) // self.snake_size
 
-        # Ensure food doesn't spawn on snake
         attempts = 0
-        while attempts < 20:  # Prevent infinite loop
+        while attempts < 20:
             food_x = random.randint(0, max_x) * self.snake_size
             food_y = random.randint(0, max_y) * self.snake_size
 
@@ -160,15 +167,15 @@ class SnakeGame(tk.Frame):
                 break
             attempts += 1
 
-        # Create food
+        # Create food with better visibility - using a contrasting color
         self.food = self.canvas.create_oval(
-            food_x + 1,
-            food_y + 1,
-            food_x + self.snake_size - 1,
-            food_y + self.snake_size - 1,
-            fill="#E74C3C",
-            outline="#C0392B",
-            width=2,
+            food_x + 2,
+            food_y + 2,
+            food_x + self.snake_size - 2,
+            food_y + self.snake_size - 2,
+            fill="#E74C3C",  # Keep red for good contrast against dark blue background
+            outline="#C0392B",  # Darker red border
+            width=3,
             tags="food",
         )
 
@@ -178,10 +185,9 @@ class SnakeGame(tk.Frame):
             return
 
         current_time = self.tk.call("clock", "milliseconds")
-        if current_time - self.last_direction_change < 100:  # Debounce
+        if current_time - self.last_direction_change < 120:
             return
 
-        # Prevent reverse direction
         opposites = {"Left": "Right", "Right": "Left", "Up": "Down", "Down": "Up"}
         if new_direction != opposites.get(self.direction):
             self.direction = new_direction
@@ -192,7 +198,6 @@ class SnakeGame(tk.Frame):
         if not self.running:
             return
 
-        # Calculate new head position
         head_x, head_y = self.snake[0]
         moves = {
             "Left": (-self.snake_size, 0),
@@ -215,7 +220,6 @@ class SnakeGame(tk.Frame):
             self.game_over()
             return
 
-        # Add new head
         self.snake.insert(0, new_head)
 
         # Check food collision
@@ -224,15 +228,11 @@ class SnakeGame(tk.Frame):
             self.score += 1
             self.update_score()
             self.spawn_food()
-            # Slightly increase speed
-            self.game_speed = max(80, self.game_speed - 2)
+            self.game_speed = max(100, self.game_speed - 3)
         else:
-            self.snake.pop()  # Remove tail
+            self.snake.pop()
 
-        # Redraw snake
         self.draw_snake()
-
-        # Schedule next update
         self.after_id = self.after(self.game_speed, self.game_loop)
 
     def check_food_collision(self, head, food_coords):
@@ -247,22 +247,21 @@ class SnakeGame(tk.Frame):
         )
 
     def game_over(self):
-        """Handle game over efficiently"""
+        """Handle game over with new color scheme"""
         self.running = False
         self.pause()
 
-        # Show game over message
         center_x, center_y = self.width // 2, self.height // 2
 
-        # Background for text
+        # Background for text with new colors
         bg = self.canvas.create_rectangle(
-            center_x - 80,
-            center_y - 30,
-            center_x + 80,
-            center_y + 30,
-            fill="#2C3E50",
-            outline="#E74C3C",
-            width=2,
+            center_x - 100,
+            center_y - 40,
+            center_x + 100,
+            center_y + 40,
+            fill="#181F67",  # New dark blue
+            outline="#E74C3C",  # Keep red for visibility
+            width=3,
             tags="gameover",
         )
 
@@ -271,16 +270,23 @@ class SnakeGame(tk.Frame):
             center_x,
             center_y,
             text="Game Over!",
-            fill="#E74C3C",
-            font=("Segoe UI", 14, "bold"),
+            fill="#E74C3C",  # Keep red for visibility
+            font=("Segoe UI", 16, "bold"),
             tags="gameover",
         )
 
         self.game_over_elements = [bg, text]
 
         # Show restart button
-        self.start_button.config(text="🔄 Play Again")
-        self.start_button.place(relx=0.5, rely=0.7, anchor="center")
+        self.start_button.config(
+            text="🔄 Play Again",
+            font=("Segoe UI", 14, "bold"),
+            bg="#7BB837",  # New green
+            activebackground="#6FA02E",  # Darker green on hover
+            padx=25,
+            pady=12
+        )
+        self.start_button.place(relx=0.5, rely=0.75, anchor="center")
 
     def clear_game_over(self):
         """Clear game over elements"""
@@ -300,17 +306,17 @@ class SnakeGame(tk.Frame):
         self.pause()
 
     def generate_commentary(self, score):
-        """Generate performance commentary"""
+        """Generate performance commentary with updated thresholds"""
         comments = [
             (0, "🐌 Baby steps! Every expert was once a beginner."),
-            (3, "🎯 Getting the hang of it! Keep practicing."),
-            (7, "🚀 Nice moves! You're improving quickly."),
-            (12, "🏆 Impressive! You've got real skills."),
-            (20, "🔥 Outstanding! You're a snake charmer!"),
-            (30, "🌟 Legendary! Are you sure you're human?"),
+            (4, "🎯 Getting the hang of it! Keep practicing."),
+            (8, "🚀 Nice moves! You're improving quickly."),
+            (15, "🏆 Impressive! You've got real skills."),
+            (25, "🔥 Outstanding! You're a snake charmer!"),
+            (35, "🌟 Legendary! Are you sure you're human?"),
         ]
 
         for threshold, comment in reversed(comments):
             if score >= threshold:
                 return comment
-        return comments[0][1]  # Default to first comment
+        return comments[0][1]

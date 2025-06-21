@@ -14,11 +14,14 @@ class LoginPage(ttk.Frame):
         content_frame = ttk.Frame(outer_frame)
         content_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Page Title
+        # Page Title with larger font and new color
         label_title = ttk.Label(
-            content_frame, text="PostgreSQL Login", font=("Helvetica", 16, "bold")
+            content_frame, 
+            text="PostgreSQL Login", 
+            font=("Segoe UI", 24, "bold"),
+            foreground="#181F67"  # New dark blue
         )
-        label_title.grid(row=0, column=0, columnspan=2, pady=(30, 20))
+        label_title.grid(row=0, column=0, columnspan=2, pady=(40, 30))
 
         # Use StringVar for each field with default values.
         self.host_var = tk.StringVar(value="localhost")
@@ -26,43 +29,92 @@ class LoginPage(ttk.Frame):
         self.user_var = tk.StringVar(value="brosmar")
         self.password_var = tk.StringVar()
 
-        # Host field
-        ttk.Label(content_frame, text="Host:").grid(
-            row=1, column=0, padx=10, pady=5, sticky="w"
+        # Host field with larger fonts and new colors
+        ttk.Label(
+            content_frame, 
+            text="Host:", 
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=1, column=0, padx=15, pady=12, sticky="w")
+        
+        self.entry_host = ttk.Entry(
+            content_frame, 
+            textvariable=self.host_var,
+            font=("Segoe UI", 14),
+            width=25
         )
-        self.entry_host = ttk.Entry(content_frame, textvariable=self.host_var)
-        self.entry_host.grid(row=1, column=1, padx=10, pady=5)
+        self.entry_host.grid(row=1, column=1, padx=15, pady=12)
 
         # Port field
-        ttk.Label(content_frame, text="Port:").grid(
-            row=2, column=0, padx=10, pady=5, sticky="w"
+        ttk.Label(
+            content_frame, 
+            text="Port:", 
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=2, column=0, padx=15, pady=12, sticky="w")
+        
+        self.entry_port = ttk.Entry(
+            content_frame, 
+            textvariable=self.port_var,
+            font=("Segoe UI", 14),
+            width=25
         )
-        self.entry_port = ttk.Entry(content_frame, textvariable=self.port_var)
-        self.entry_port.grid(row=2, column=1, padx=10, pady=5)
+        self.entry_port.grid(row=2, column=1, padx=15, pady=12)
 
         # Username field
-        ttk.Label(content_frame, text="Username:").grid(
-            row=3, column=0, padx=10, pady=5, sticky="w"
+        ttk.Label(
+            content_frame, 
+            text="Username:", 
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=3, column=0, padx=15, pady=12, sticky="w")
+        
+        self.entry_user = ttk.Entry(
+            content_frame, 
+            textvariable=self.user_var,
+            font=("Segoe UI", 14),
+            width=25
         )
-        self.entry_user = ttk.Entry(content_frame, textvariable=self.user_var)
-        self.entry_user.grid(row=3, column=1, padx=10, pady=5)
+        self.entry_user.grid(row=3, column=1, padx=15, pady=12)
 
-        # Password field (user-entered)
-        ttk.Label(content_frame, text="Password:").grid(
-            row=4, column=0, padx=10, pady=5, sticky="w"
-        )
+        # Password field
+        ttk.Label(
+            content_frame, 
+            text="Password:", 
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=4, column=0, padx=15, pady=12, sticky="w")
+        
         self.entry_password = ttk.Entry(
-            content_frame, textvariable=self.password_var, show="*"
+            content_frame, 
+            textvariable=self.password_var, 
+            show="*",
+            font=("Segoe UI", 14),
+            width=25
         )
-        self.entry_password.grid(row=4, column=1, padx=10, pady=5)
-        # Bind the Enter key to trigger connection
+        self.entry_password.grid(row=4, column=1, padx=15, pady=12)
         self.entry_password.bind("<Return>", self.on_enter_pressed)
 
-        # Connect button
-        button_connect = ttk.Button(
-            content_frame, text="Connect", command=self.attempt_login
+        # Connect button with new color scheme
+        style = ttk.Style()
+        style.configure(
+            "Login.TButton",
+            font=("Segoe UI", 14, "bold"),
+            padding=(30, 15),
+            background="#7BB837",  # New green
+            foreground="white",
+            borderwidth=0,
+            relief="flat"
         )
-        button_connect.grid(row=5, column=0, columnspan=2, pady=20)
+        style.map("Login.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
+        
+        button_connect = ttk.Button(
+            content_frame, 
+            text="Connect", 
+            command=self.attempt_login,
+            style="Login.TButton"
+        )
+        button_connect.grid(row=5, column=0, columnspan=2, pady=30)
 
     def on_enter_pressed(self, event):
         self.attempt_login()
