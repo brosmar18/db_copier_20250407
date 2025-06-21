@@ -14,32 +14,34 @@ class LoginPage(ttk.Frame):
         content_frame = ttk.Frame(outer_frame)
         content_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Page Title with larger font
+        # Page Title with larger font and new color
         label_title = ttk.Label(
             content_frame, 
             text="PostgreSQL Login", 
-            font=("Segoe UI", 24, "bold")  # Increased from 16
+            font=("Segoe UI", 24, "bold"),
+            foreground="#181F67"  # New dark blue
         )
-        label_title.grid(row=0, column=0, columnspan=2, pady=(40, 30))  # Increased padding
+        label_title.grid(row=0, column=0, columnspan=2, pady=(40, 30))
 
         # Use StringVar for each field with default values.
         self.host_var = tk.StringVar(value="localhost")
         self.port_var = tk.StringVar(value="5432")
-        self.user_var = tk.StringVar(value="postgres")
+        self.user_var = tk.StringVar(value="brosmar")
         self.password_var = tk.StringVar()
 
-        # Host field with larger fonts and padding
+        # Host field with larger fonts and new colors
         ttk.Label(
             content_frame, 
             text="Host:", 
-            font=("Segoe UI", 14, "bold")  # Increased font
-        ).grid(row=1, column=0, padx=15, pady=12, sticky="w")  # Increased padding
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=1, column=0, padx=15, pady=12, sticky="w")
         
         self.entry_host = ttk.Entry(
             content_frame, 
             textvariable=self.host_var,
-            font=("Segoe UI", 14),  # Larger font
-            width=25  # Adequate width
+            font=("Segoe UI", 14),
+            width=25
         )
         self.entry_host.grid(row=1, column=1, padx=15, pady=12)
 
@@ -47,7 +49,8 @@ class LoginPage(ttk.Frame):
         ttk.Label(
             content_frame, 
             text="Port:", 
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
         ).grid(row=2, column=0, padx=15, pady=12, sticky="w")
         
         self.entry_port = ttk.Entry(
@@ -62,7 +65,8 @@ class LoginPage(ttk.Frame):
         ttk.Label(
             content_frame, 
             text="Username:", 
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
         ).grid(row=3, column=0, padx=15, pady=12, sticky="w")
         
         self.entry_user = ttk.Entry(
@@ -73,11 +77,12 @@ class LoginPage(ttk.Frame):
         )
         self.entry_user.grid(row=3, column=1, padx=15, pady=12)
 
-        # Password field (user-entered)
+        # Password field
         ttk.Label(
             content_frame, 
             text="Password:", 
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
         ).grid(row=4, column=0, padx=15, pady=12, sticky="w")
         
         self.entry_password = ttk.Entry(
@@ -88,18 +93,20 @@ class LoginPage(ttk.Frame):
             width=25
         )
         self.entry_password.grid(row=4, column=1, padx=15, pady=12)
-        # Bind the Enter key to trigger connection
         self.entry_password.bind("<Return>", self.on_enter_pressed)
 
-        # Connect button with improved styling
+        # Connect button with new color scheme
         style = ttk.Style()
         style.configure(
             "Login.TButton",
             font=("Segoe UI", 14, "bold"),
-            padding=(30, 15),  # Larger button
-            background="#3498DB",
-            foreground="white"
+            padding=(30, 15),
+            background="#7BB837",  # New green
+            foreground="white",
+            borderwidth=0,
+            relief="flat"
         )
+        style.map("Login.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
         
         button_connect = ttk.Button(
             content_frame, 
@@ -107,7 +114,7 @@ class LoginPage(ttk.Frame):
             command=self.attempt_login,
             style="Login.TButton"
         )
-        button_connect.grid(row=5, column=0, columnspan=2, pady=30)  # Increased padding
+        button_connect.grid(row=5, column=0, columnspan=2, pady=30)
 
     def on_enter_pressed(self, event):
         self.attempt_login()

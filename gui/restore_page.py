@@ -16,60 +16,61 @@ class RestorePage(ttk.Frame):
         self.bind("<<ShowFrame>>", self.on_show_frame)
 
     def create_widgets(self):
-        """Create widgets lazily for better startup performance with improved sizing"""
+        """Create widgets lazily with new color scheme"""
         if self._widgets_created:
             return
 
-        # Setup styles with better visibility
+        # Setup styles with new color scheme
         style = ttk.Style(self)
         style.configure(
             "Restore.Horizontal.TProgressbar",
             troughcolor="#E8E8E8",
-            background="#3498DB",
+            background="#7BB837",  # New green
             borderwidth=2
         )
 
         # Main container with increased padding
-        main_frame = ttk.Frame(self, padding=40)  # Increased from 30
+        main_frame = ttk.Frame(self, padding=40)
         main_frame.pack(expand=True, fill="both")
 
         # Content frame (centered)
         content_frame = ttk.Frame(main_frame)
         content_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Title with larger font
+        # Title with new color scheme
         title = ttk.Label(
             content_frame, 
             text="Database Restore", 
-            font=("Segoe UI", 24, "bold")  # Increased from 18
+            font=("Segoe UI", 24, "bold"),
+            foreground="#181F67"  # New dark blue
         )
-        title.grid(row=0, column=0, columnspan=3, pady=(0, 40))  # Increased padding
+        title.grid(row=0, column=0, columnspan=3, pady=(0, 40))
 
-        # Form fields with improved styling
+        # Form fields with new color scheme
         self.create_form_fields(content_frame)
 
-        # Action buttons with better styling
+        # Action buttons with new color scheme
         self.create_action_buttons(content_frame)
 
-        # Progress section (initially hidden) with improved styling
+        # Progress section with new color scheme
         self.create_progress_section(content_frame)
 
         # Snake game with better sizing
-        self.snake_game = SnakeGame(content_frame, width=400, height=280)  # Increased size
-        self.snake_game.grid(row=7, column=0, columnspan=3, pady=25)  # Increased padding
+        self.snake_game = SnakeGame(content_frame, width=400, height=280)
+        self.snake_game.grid(row=7, column=0, columnspan=3, pady=25)
         self.snake_game.grid_remove()
 
-        # Navigation button with better styling
+        # Navigation button with new color scheme
         style.configure(
             "NavSecondary.TButton",
-            background="#95A5A6",
+            background="#939498",  # New gray
             foreground="white",
-            font=("Segoe UI", 12, "bold"),  # Increased from 10
-            padding=(20, 12),  # Increased from (15, 8)
+            font=("Segoe UI", 12, "bold"),
+            padding=(20, 12),
             borderwidth=0,
             relief="flat"
         )
-        style.map("NavSecondary.TButton", background=[("active", "#7F8C8D")])
+        style.map("NavSecondary.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
 
         back_btn = ttk.Button(
             content_frame,
@@ -77,53 +78,58 @@ class RestorePage(ttk.Frame):
             command=lambda: self.controller.show_frame("DBManagementPage"),
             style="NavSecondary.TButton",
         )
-        back_btn.grid(row=8, column=0, columnspan=3, pady=20)  # Increased padding
+        back_btn.grid(row=8, column=0, columnspan=3, pady=20)
 
         self._widgets_created = True
 
     def create_form_fields(self, parent):
-        """Create form input fields with improved sizing"""
-        # Database name with larger fonts
+        """Create form input fields with new color scheme"""
+        # Database name with new colors
         ttk.Label(
             parent, 
             text="New Database Name:", 
-            font=("Segoe UI", 14, "bold")  # Increased from 11
-        ).grid(row=1, column=0, sticky="e", padx=(0, 20), pady=15)  # Increased padding
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=1, column=0, sticky="e", padx=(0, 20), pady=15)
 
         self.db_name_var = tk.StringVar()
         self.db_name_entry = ttk.Entry(
             parent, 
             textvariable=self.db_name_var, 
-            font=("Segoe UI", 13),  # Increased from 11
-            width=40  # Increased from 35
+            font=("Segoe UI", 13),
+            width=40
         )
-        self.db_name_entry.grid(row=1, column=1, padx=8, pady=15, sticky="ew")  # Increased padding
+        self.db_name_entry.grid(row=1, column=1, padx=8, pady=15, sticky="ew")
 
-        # Backup file with improved styling
+        # Backup file with new color scheme
         ttk.Label(
             parent, 
             text="Backup File:", 
-            font=("Segoe UI", 14, "bold")  # Increased font
-        ).grid(row=2, column=0, sticky="e", padx=(0, 20), pady=15)  # Increased padding
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=2, column=0, sticky="e", padx=(0, 20), pady=15)
 
         self.backup_file_var = tk.StringVar()
         self.backup_file_entry = ttk.Entry(
             parent, 
             textvariable=self.backup_file_var, 
-            font=("Segoe UI", 13),  # Increased from 11
-            width=40  # Increased from 35
+            font=("Segoe UI", 13),
+            width=40
         )
-        self.backup_file_entry.grid(row=2, column=1, padx=8, pady=15, sticky="ew")  # Increased padding
+        self.backup_file_entry.grid(row=2, column=1, padx=8, pady=15, sticky="ew")
 
-        # Browse button with better styling
+        # Browse button with new color scheme
         style = ttk.Style()
         style.configure(
             "Browse.TButton",
             font=("Segoe UI", 12, "bold"),
             padding=(18, 10),
-            background="#34495E",
-            foreground="white"
+            background="#939498",  # New gray
+            foreground="white",
+            borderwidth=0,
+            relief="flat"
         )
+        style.map("Browse.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
         
         browse_btn = ttk.Button(
             parent, 
@@ -131,14 +137,15 @@ class RestorePage(ttk.Frame):
             command=self.browse_file,
             style="Browse.TButton"
         )
-        browse_btn.grid(row=2, column=2, padx=(20, 0), pady=15)  # Increased padding
+        browse_btn.grid(row=2, column=2, padx=(20, 0), pady=15)
 
-        # PostgreSQL binary path with improved styling
+        # PostgreSQL binary path with new color scheme
         ttk.Label(
             parent, 
             text="PostgreSQL Bin Path:", 
-            font=("Segoe UI", 14, "bold")  # Increased font
-        ).grid(row=3, column=0, sticky="e", padx=(0, 20), pady=15)  # Increased padding
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
+        ).grid(row=3, column=0, sticky="e", padx=(0, 20), pady=15)
 
         self.pg_restore_path_var = tk.StringVar(
             value=r"C:\Program Files\PostgreSQL\12\bin"
@@ -146,41 +153,41 @@ class RestorePage(ttk.Frame):
         self.pg_restore_path_entry = ttk.Entry(
             parent,
             textvariable=self.pg_restore_path_var,
-            font=("Segoe UI", 13),  # Increased from 11
-            width=40  # Increased from 35
+            font=("Segoe UI", 13),
+            width=40
         )
-        self.pg_restore_path_entry.grid(row=3, column=1, padx=8, pady=15, sticky="ew")  # Increased padding
+        self.pg_restore_path_entry.grid(row=3, column=1, padx=8, pady=15, sticky="ew")
 
     def create_action_buttons(self, parent):
-        """Create action buttons with improved styling"""
+        """Create action buttons with new color scheme"""
         button_frame = ttk.Frame(parent)
-        button_frame.grid(row=4, column=0, columnspan=3, pady=35)  # Increased padding
+        button_frame.grid(row=4, column=0, columnspan=3, pady=35)
 
-        # Configure enhanced button styles
+        # Configure enhanced button styles with new colors
         style = ttk.Style()
         style.configure(
             "RestorePrimary.TButton",
-            background="#3498DB",
+            background="#7BB837",  # New green
             foreground="white",
-            font=("Segoe UI", 14, "bold"),  # Increased from 11
-            padding=(35, 18),  # Increased from (20, 10)
+            font=("Segoe UI", 14, "bold"),
+            padding=(35, 18),
             borderwidth=0,
             relief="flat",
             focuscolor="none"
         )
-        style.map("RestorePrimary.TButton", background=[("active", "#2980B9")])
+        style.map("RestorePrimary.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
 
         style.configure(
             "RestoreSecondary.TButton",
-            background="#95A5A6",
+            background="#939498",  # New gray
             foreground="white",
-            font=("Segoe UI", 12, "bold"),  # Increased from 10
-            padding=(25, 12),  # Increased padding
+            font=("Segoe UI", 12, "bold"),
+            padding=(25, 12),
             borderwidth=0,
             relief="flat",
             focuscolor="none"
         )
-        style.map("RestoreSecondary.TButton", background=[("active", "#7F8C8D")])
+        style.map("RestoreSecondary.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
 
         self.restore_btn = ttk.Button(
             button_frame,
@@ -188,7 +195,7 @@ class RestorePage(ttk.Frame):
             command=self.start_restore,
             style="RestorePrimary.TButton",
         )
-        self.restore_btn.pack(side="left", padx=15)  # Increased spacing
+        self.restore_btn.pack(side="left", padx=15)
 
         clear_btn = ttk.Button(
             button_frame,
@@ -196,46 +203,47 @@ class RestorePage(ttk.Frame):
             command=self.clear_form,
             style="RestoreSecondary.TButton",
         )
-        clear_btn.pack(side="left", padx=15)  # Increased spacing
+        clear_btn.pack(side="left", padx=15)
 
     def create_progress_section(self, parent):
-        """Create progress display section with improved styling"""
+        """Create progress display section with new color scheme"""
         self.progress_frame = ttk.Frame(parent)
-        self.progress_frame.grid(row=5, column=0, columnspan=3, pady=25, sticky="ew")  # Increased padding
+        self.progress_frame.grid(row=5, column=0, columnspan=3, pady=25, sticky="ew")
 
-        # Progress label with better styling
+        # Progress label with new color scheme
         self.progress_label = ttk.Label(
             self.progress_frame, 
             text="Restore Progress:", 
-            font=("Segoe UI", 14, "bold")  # Increased from 11
+            font=("Segoe UI", 14, "bold"),
+            foreground="#181F67"  # New dark blue
         )
-        self.progress_label.pack(anchor="w", pady=(0, 12))  # Increased padding
+        self.progress_label.pack(anchor="w", pady=(0, 12))
 
-        # Progress bar with better styling
+        # Progress bar with new color scheme
         self.progress_bar = ttk.Progressbar(
             self.progress_frame,
             mode="indeterminate",
             style="Restore.Horizontal.TProgressbar",
         )
-        self.progress_bar.pack(fill="x", pady=(0, 15))  # Increased padding
+        self.progress_bar.pack(fill="x", pady=(0, 15))
 
-        # Status label with larger font
+        # Status label with new color scheme
         self.status_label = ttk.Label(
             self.progress_frame, 
             text="", 
-            font=("Segoe UI", 12),  # Increased from 10
-            foreground="#2C3E50"
+            font=("Segoe UI", 12),
+            foreground="#181F67"  # New dark blue
         )
         self.status_label.pack(anchor="w")
 
-        # Entertainment message with better styling
+        # Entertainment message with new color scheme
         self.entertainment_label = ttk.Label(
             self.progress_frame,
             text="🎮 Enjoy the snake game while waiting!",
-            font=("Segoe UI", 12, "italic"),  # Increased from 10
-            foreground="#7F8C8D",
+            font=("Segoe UI", 12, "italic"),
+            foreground="#939498",  # New gray
         )
-        self.entertainment_label.pack(anchor="w", pady=(15, 0))  # Increased padding
+        self.entertainment_label.pack(anchor="w", pady=(15, 0))
 
         # Hide initially
         self.progress_frame.grid_remove()
@@ -358,7 +366,7 @@ class RestorePage(ttk.Frame):
     def show_progress(self, initial_message):
         """Show progress section"""
         self.progress_frame.grid()
-        self.progress_bar.start(8)  # Gentle animation
+        self.progress_bar.start(8)
         self.status_label.config(text=initial_message)
 
     def hide_progress(self):

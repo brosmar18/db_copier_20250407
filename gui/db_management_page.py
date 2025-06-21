@@ -33,13 +33,13 @@ class DBManagementPage(ttk.Frame):
         self._styles_configured = False
         self._widgets_created = False
 
-        # Performance optimizations (keep functionality, improve speed)
-        self._db_cache = {}  # Cache database metadata
+        # Performance optimizations
+        self._db_cache = {}
         self._operation_in_progress = False
         self._last_filter_time = 0
-        self._filter_delay = 400  # Optimized for Windows
+        self._filter_delay = 400
 
-        # Create basic layout structure first (minimal)
+        # Create basic layout structure first
         self.setup_basic_layout()
 
         # Bind to show frame event for lazy initialization
@@ -48,7 +48,7 @@ class DBManagementPage(ttk.Frame):
     def setup_basic_layout(self):
         """Create minimal layout structure for fast startup"""
         outer_frame = ttk.Frame(self)
-        outer_frame.pack(expand=True, fill="both", padx=20, pady=20)  # Increased padding
+        outer_frame.pack(expand=True, fill="both", padx=20, pady=20)
 
         # Simple PanedWindow initially
         self.main_paned = ttk.PanedWindow(outer_frame, orient="horizontal")
@@ -62,68 +62,68 @@ class DBManagementPage(ttk.Frame):
         self.main_paned.add(self.right_frame, weight=2)
 
     def configure_styles(self):
-        """Configure all styles but only once when needed with improved readability"""
+        """Configure all styles with new color scheme"""
         if self._styles_configured:
             return
 
         style = ttk.Style(self)
         style.theme_use("clam")
 
-        # Custom Treeview styles with larger fonts and row heights
+        # Custom Treeview styles with new color scheme
         style.configure(
             "Custom.Treeview.Heading",
-            background="#2C3E50",
+            background="#181F67",  # New dark blue
             foreground="white",
-            font=("Segoe UI", 13, "bold"),  # Increased from 11
+            font=("Segoe UI", 13, "bold"),
             relief="flat",
             borderwidth=2
         )
         style.configure(
             "Custom.Treeview",
-            font=("Segoe UI", 12),  # Increased from 10
-            rowheight=35,  # Increased from 25
+            font=("Segoe UI", 12),
+            rowheight=35,
             fieldbackground="white",
             borderwidth=1
         )
-        style.map("Custom.Treeview.Heading", background=[("active", "#34495E")])
-        style.map("Custom.Treeview", background=[("selected", "#3498DB")])
+        style.map("Custom.Treeview.Heading", background=[("active", "#0F1A4D")])  # Darker blue
+        style.map("Custom.Treeview", background=[("selected", "#7BB837")])  # New green
 
         # History Treeview styles
         style.configure(
             "History.Treeview.Heading",
-            background="#34495E",
+            background="#939498",  # New gray
             foreground="white",
-            font=("Segoe UI", 12, "bold"),  # Increased from 10
+            font=("Segoe UI", 12, "bold"),
             relief="flat",
         )
         style.configure(
             "History.Treeview",
-            font=("Segoe UI", 11),  # Increased from 9
-            rowheight=30,  # Increased from 22
+            font=("Segoe UI", 11),
+            rowheight=30,
             fieldbackground="#FAFAFA",
         )
-        style.map("History.Treeview.Heading", background=[("active", "#2C3E50")])
-        style.map("History.Treeview", background=[("selected", "#5DADE2")])
+        style.map("History.Treeview.Heading", background=[("active", "#7A7A7E")])  # Darker gray
+        style.map("History.Treeview", background=[("selected", "#7BB837")])  # New green
 
-        # Modern button styles with larger fonts and padding
+        # Modern button styles with new color scheme
         style.configure(
             "Primary.TButton",
-            background="#3498DB",
+            background="#181F67",  # New dark blue
             foreground="white",
-            font=("Segoe UI", 12, "bold"),  # Increased from 10
-            padding=(25, 15),  # Increased from (20, 12)
+            font=("Segoe UI", 12, "bold"),
+            padding=(25, 15),
             borderwidth=0,
             relief="flat",
             focuscolor="none",
         )
         style.map(
             "Primary.TButton",
-            background=[("active", "#2980B9"), ("pressed", "#21618C")],
+            background=[("active", "#0F1A4D"), ("pressed", "#0C1540")],  # Darker blues
         )
 
         style.configure(
             "Success.TButton",
-            background="#27AE60",
+            background="#7BB837",  # New green
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(25, 15),
@@ -133,12 +133,12 @@ class DBManagementPage(ttk.Frame):
         )
         style.map(
             "Success.TButton",
-            background=[("active", "#229954"), ("pressed", "#1E8449")],
+            background=[("active", "#6FA02E"), ("pressed", "#5F8A26")],  # Darker greens
         )
 
         style.configure(
             "Danger.TButton",
-            background="#E74C3C",
+            background="#E74C3C",  # Keep red for danger
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(25, 15),
@@ -152,7 +152,7 @@ class DBManagementPage(ttk.Frame):
 
         style.configure(
             "Secondary.TButton",
-            background="#95A5A6",
+            background="#939498",  # New gray
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(25, 15),
@@ -162,12 +162,12 @@ class DBManagementPage(ttk.Frame):
         )
         style.map(
             "Secondary.TButton",
-            background=[("active", "#7F8C8D"), ("pressed", "#566573")],
+            background=[("active", "#7A7A7E"), ("pressed", "#6A6A6E")],  # Darker grays
         )
 
         style.configure(
             "Warning.TButton",
-            background="#F39C12",
+            background="#F39C12",  # Keep orange for warning
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(25, 15),
@@ -182,7 +182,7 @@ class DBManagementPage(ttk.Frame):
 
         style.configure(
             "Accent.TButton",
-            background="#9B59B6",
+            background="#181F67",  # New dark blue instead of purple
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(25, 15),
@@ -191,23 +191,23 @@ class DBManagementPage(ttk.Frame):
             focuscolor="none",
         )
         style.map(
-            "Accent.TButton", background=[("active", "#8E44AD"), ("pressed", "#7D3C98")]
+            "Accent.TButton", background=[("active", "#0F1A4D"), ("pressed", "#0C1540")]
         )
 
         # Compact button style for headers
         style.configure(
             "Compact.TButton",
-            background="#34495E",
+            background="#939498",  # New gray
             foreground="white",
-            font=("Segoe UI", 11, "bold"),  # Increased from 9
-            padding=(15, 12),  # Increased from (12, 8)
+            font=("Segoe UI", 11, "bold"),
+            padding=(15, 12),
             borderwidth=0,
             relief="flat",
             focuscolor="none",
         )
         style.map(
             "Compact.TButton",
-            background=[("active", "#2C3E50"), ("pressed", "#1B2631")],
+            background=[("active", "#7A7A7E"), ("pressed", "#6A6A6E")],
         )
 
         # Query interface styles
@@ -215,43 +215,43 @@ class DBManagementPage(ttk.Frame):
         style.configure(
             "QueryHeader.TLabel",
             background="#F8F9FA",
-            foreground="#2C3E50",
-            font=("Segoe UI", 20, "bold"),  # Increased from 16
+            foreground="#181F67",  # New dark blue
+            font=("Segoe UI", 20, "bold"),
         )
         style.configure(
             "QuerySubHeader.TLabel",
             background="#F8F9FA",
-            foreground="#34495E",
-            font=("Segoe UI", 13, "bold"),  # Increased from 10
+            foreground="#181F67",  # New dark blue
+            font=("Segoe UI", 13, "bold"),
         )
 
-        # Enhanced dialog styles
-        style.configure("Dialog.TFrame", background="#2C3E50", relief="flat")
+        # Enhanced dialog styles with new color scheme
+        style.configure("Dialog.TFrame", background="#181F67", relief="flat")  # New dark blue
         style.configure(
             "Dialog.TLabel",
-            background="#2C3E50",
+            background="#181F67",  # New dark blue
             foreground="white",
-            font=("Segoe UI", 13),  # Increased from 11
+            font=("Segoe UI", 13),
         )
         style.configure(
             "DialogHeader.TLabel",
-            background="#2C3E50",
-            foreground="#F1C40F",
-            font=("Segoe UI", 18, "bold"),  # Increased from 14
+            background="#181F67",  # New dark blue
+            foreground="#7BB837",  # New green for highlights
+            font=("Segoe UI", 18, "bold"),
         )
         style.configure(
             "DialogHighlight.TLabel",
-            background="#2C3E50",
-            foreground="#E74C3C",
-            font=("Segoe UI", 13, "bold"),  # Increased from 11
+            background="#181F67",  # New dark blue
+            foreground="#E74C3C",  # Keep red for dangerous highlights
+            font=("Segoe UI", 13, "bold"),
         )
 
-        # PanedWindow styles for professional appearance
+        # PanedWindow styles
         style.configure(
             "TPanedwindow", background="#E8E8E8", relief="flat", borderwidth=0
         )
         style.configure(
-            "Sash", sashthickness=8, background="#BDC3C7", relief="flat", borderwidth=0  # Increased sash thickness
+            "Sash", sashthickness=8, background="#939498", relief="flat", borderwidth=0  # New gray
         )
 
         self._styles_configured = True
@@ -264,39 +264,39 @@ class DBManagementPage(ttk.Frame):
         # Configure styles first
         self.configure_styles()
 
-        # Create left panel (database list)
+        # Create left panel
         self.create_left_panel()
 
-        # Create right panel (content views)
+        # Create right panel
         self.create_right_panel()
 
-        # Set initial sash position after idle with better proportion
-        self.after_idle(lambda: self.main_paned.sashpos(0, 400))  # Increased from 350
+        # Set initial sash position
+        self.after_idle(lambda: self.main_paned.sashpos(0, 400))
 
         self._widgets_created = True
 
     def create_left_panel(self):
-        """Create the full left panel with all original functionality"""
-        # === LEFT PANE: DATABASES (with improved styling) ===
+        """Create the left panel with new color scheme"""
+        # Left header
         left_header = ttk.Frame(self.left_frame)
-        left_header.pack(fill="x", pady=(0, 20))  # Increased padding
+        left_header.pack(fill="x", pady=(0, 20))
 
         title_label = ttk.Label(
             left_header,
             text="Databases",
-            font=("Segoe UI", 20, "bold"),  # Increased from 16
-            foreground="#2C3E50",
+            font=("Segoe UI", 20, "bold"),
+            foreground="#181F67",  # New dark blue
         )
         title_label.pack(side="left", anchor="w")
 
-        # Add loading indicator for performance feedback
+        # Loading indicator
         self.loading_label = ttk.Label(
             left_header,
             text="",
-            font=("Segoe UI", 11),  # Increased from 9
-            foreground="#7F8C8D",
+            font=("Segoe UI", 11),
+            foreground="#939498",  # New gray
         )
-        self.loading_label.pack(side="left", padx=(15, 0))  # Increased padding
+        self.loading_label.pack(side="left", padx=(15, 0))
 
         refresh_btn = ttk.Button(
             left_header,
@@ -304,32 +304,30 @@ class DBManagementPage(ttk.Frame):
             command=self.load_databases_async,
             style="Compact.TButton",
         )
-        refresh_btn.pack(side="right", padx=(15, 0))  # Increased padding
+        refresh_btn.pack(side="right", padx=(15, 0))
 
-        # Enhanced search
+        # Search section
         self.db_search_var = tk.StringVar()
         db_search_frame = ttk.Frame(self.left_frame)
-        db_search_frame.pack(fill="x", pady=(0, 15))  # Increased padding
+        db_search_frame.pack(fill="x", pady=(0, 15))
 
         search_label = ttk.Label(
             db_search_frame,
             text="Search:",
-            font=("Segoe UI", 13, "bold"),  # Increased from 10
-            foreground="#34495E",
+            font=("Segoe UI", 13, "bold"),
+            foreground="#181F67",  # New dark blue
         )
-        search_label.pack(side="left", padx=(0, 12))  # Increased padding
+        search_label.pack(side="left", padx=(0, 12))
 
         self.db_search_entry = ttk.Entry(
             db_search_frame, 
             textvariable=self.db_search_var, 
-            font=("Segoe UI", 12)  # Increased from 10
+            font=("Segoe UI", 12)
         )
         self.db_search_entry.pack(side="left", fill="x", expand=True)
-        self.db_search_entry.bind(
-            "<KeyRelease>", self.filter_databases_debounced
-        )
+        self.db_search_entry.bind("<KeyRelease>", self.filter_databases_debounced)
 
-        # Enhanced treeview
+        # Treeview
         tree_frame = ttk.Frame(self.left_frame)
         tree_frame.pack(expand=True, fill="both")
 
@@ -341,9 +339,8 @@ class DBManagementPage(ttk.Frame):
             style="Custom.Treeview",
         )
         self.db_tree.heading("Database", text="Database Name")
-        self.db_tree.column("Database", anchor="w", width=300)  # Increased width
+        self.db_tree.column("Database", anchor="w", width=300)
 
-        # Add scrollbar
         scrollbar = ttk.Scrollbar(
             tree_frame, orient="vertical", command=self.db_tree.yview
         )
@@ -354,24 +351,24 @@ class DBManagementPage(ttk.Frame):
 
         self.db_tree.bind("<<TreeviewSelect>>", self.on_db_select_async)
 
-        # === CONTEXT MENU: ALL ORIGINAL FUNCTIONALITY PRESERVED ===
+        # Context menu
         self.create_context_menu()
 
     def create_context_menu(self):
-        """Create the full context menu with all original functionality"""
+        """Create context menu with new color scheme"""
         self.db_context_menu = tk.Menu(
             self,
             tearoff=0,
-            font=("Segoe UI", 12),  # Increased from 10
+            font=("Segoe UI", 12),
             bg="#FFFFFF",
-            fg="#2C3E50",
-            activebackground="#3498DB",
+            fg="#181F67",  # New dark blue
+            activebackground="#7BB837",  # New green
             activeforeground="white",
             borderwidth=1,
             relief="solid",
         )
 
-        # Bind all original events
+        # Bind events
         self.db_tree.bind("<Button-3>", self.show_db_context_menu)
         self.db_tree.bind("<Control-Button-1>", self.show_db_context_menu)
         self.db_tree.bind("<Button-2>", self.show_db_context_menu)
@@ -380,75 +377,70 @@ class DBManagementPage(ttk.Frame):
 
     def create_right_panel(self):
         """Create right panel with both views"""
-        # Create both views (keep all original functionality)
         self.create_normal_view()
         self.create_query_view()
-
-        # Start with normal view
         self.query_frame.pack_forget()
 
     def create_normal_view(self):
-        """Create the normal view with improved fonts and spacing"""
+        """Create the normal view with new color scheme"""
         self.normal_frame = ttk.Frame(self.right_frame)
         self.normal_frame.pack(fill="both", expand=True)
         self.normal_frame.columnconfigure(0, weight=1)
 
-        # === NORMAL VIEW: DETAILS & TABLES/FIELDS with improved styling ===
+        # Details header
         details_header = ttk.Label(
             self.normal_frame,
             text="Database Details",
-            font=("Segoe UI", 20, "bold"),  # Increased from 16
-            foreground="#2C3E50",
+            font=("Segoe UI", 20, "bold"),
+            foreground="#181F67",  # New dark blue
         )
-        details_header.grid(row=0, column=0, sticky="w", pady=(0, 15))  # Increased padding
+        details_header.grid(row=0, column=0, sticky="w", pady=(0, 15))
 
         self.details_text = tk.Text(
             self.normal_frame,
             wrap="word",
-            font=("Segoe UI", 12),  # Increased from 10
+            font=("Segoe UI", 12),
             height=6,
             bg="#F8F9FA",
-            fg="#2C3E50",
+            fg="#181F67",  # New dark blue
             relief="solid",
             borderwidth=1,
-            padx=10,  # Added internal padding
+            padx=10,
             pady=8
         )
-        self.details_text.grid(row=1, column=0, sticky="nsew", pady=(0, 25))  # Increased padding
+        self.details_text.grid(row=1, column=0, sticky="nsew", pady=(0, 25))
         self.details_text.config(state="disabled")
         self.normal_frame.rowconfigure(1, weight=0)
 
-        # Table/field search & header
+        # Table search
         self.item_search_var = tk.StringVar()
         item_search_frame = ttk.Frame(self.normal_frame)
-        item_search_frame.grid(row=2, column=0, sticky="ew", pady=(0, 15))  # Increased padding
+        item_search_frame.grid(row=2, column=0, sticky="ew", pady=(0, 15))
 
         search_label2 = ttk.Label(
             item_search_frame,
             text="Search Tables:",
-            font=("Segoe UI", 13, "bold"),  # Increased from 10
-            foreground="#34495E",
+            font=("Segoe UI", 13, "bold"),
+            foreground="#181F67",  # New dark blue
         )
-        search_label2.pack(side="left", padx=(0, 12))  # Increased padding
+        search_label2.pack(side="left", padx=(0, 12))
 
         self.item_search_entry = ttk.Entry(
             item_search_frame, 
             textvariable=self.item_search_var, 
-            font=("Segoe UI", 12)  # Increased from 10
+            font=("Segoe UI", 12)
         )
         self.item_search_entry.pack(side="left", fill="x", expand=True)
-        self.item_search_entry.bind(
-            "<KeyRelease>", self.filter_items_debounced
-        )
+        self.item_search_entry.bind("<KeyRelease>", self.filter_items_debounced)
 
         header_frame_right = ttk.Frame(self.normal_frame)
-        header_frame_right.grid(row=3, column=0, sticky="ew", pady=(0, 15))  # Increased padding
+        header_frame_right.grid(row=3, column=0, sticky="ew", pady=(0, 15))
 
         self.right_label = ttk.Label(
             header_frame_right,
             text="Tables",
-            font=("Segoe UI", 18, "bold"),  # Increased from 14
-            foreground="#2C3E50",
+            font=("Segoe UI", 18, "bold"),
+            foreground="#181F67",  # New dark blue
         )
         self.right_label.pack(side="left")
 
@@ -461,16 +453,16 @@ class DBManagementPage(ttk.Frame):
         self.back_button.pack(side="right")
         self.back_button.grid_remove()
 
-        # Tables/fields trees with improved sizing
+        # Tables/fields trees
         self.bottom_frame = ttk.Frame(self.normal_frame)
         self.bottom_frame.grid(row=4, column=0, sticky="nsew")
         self.normal_frame.rowconfigure(4, weight=1)
         self.bottom_frame.columnconfigure(0, weight=1)
         self.bottom_frame.columnconfigure(1, weight=1)
 
-        # Tables tree with scrollbar and better spacing
+        # Tables tree
         tables_container = ttk.Frame(self.bottom_frame)
-        tables_container.grid(row=0, column=0, sticky="nsew", padx=(0, 8))  # Increased padding
+        tables_container.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         tables_container.columnconfigure(0, weight=1)
         tables_container.rowconfigure(0, weight=1)
 
@@ -481,7 +473,7 @@ class DBManagementPage(ttk.Frame):
             style="Custom.Treeview",
         )
         self.item_tree.heading("Item", text="Table Name")
-        self.item_tree.column("Item", anchor="w", width=250)  # Increased width
+        self.item_tree.column("Item", anchor="w", width=250)
 
         tables_scrollbar = ttk.Scrollbar(
             tables_container, orient="vertical", command=self.item_tree.yview
@@ -492,9 +484,9 @@ class DBManagementPage(ttk.Frame):
         tables_scrollbar.grid(row=0, column=1, sticky="ns")
         self.item_tree.bind("<<TreeviewSelect>>", self.on_item_select_async)
 
-        # Fields tree with scrollbar and better spacing
+        # Fields tree
         fields_container = ttk.Frame(self.bottom_frame)
-        fields_container.grid(row=0, column=1, sticky="nsew", padx=(8, 0))  # Increased padding
+        fields_container.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         fields_container.columnconfigure(0, weight=1)
         fields_container.rowconfigure(0, weight=1)
 
@@ -505,7 +497,7 @@ class DBManagementPage(ttk.Frame):
             style="Custom.Treeview",
         )
         self.fields_tree.heading("Field", text="Fields")
-        self.fields_tree.column("Field", anchor="w", width=250)  # Increased width
+        self.fields_tree.column("Field", anchor="w", width=250)
 
         fields_scrollbar = ttk.Scrollbar(
             fields_container, orient="vertical", command=self.fields_tree.yview
@@ -516,15 +508,15 @@ class DBManagementPage(ttk.Frame):
         fields_scrollbar.grid(row=0, column=1, sticky="ns")
 
     def create_query_view(self):
-        """Create the SQL query interface view with improved styling"""
+        """Create query view with new color scheme"""
         self.query_frame = ttk.Frame(self.right_frame, style="Query.TFrame")
         self.query_frame.pack(fill="both", expand=True)
         self.query_frame.columnconfigure(0, weight=1)
         self.query_frame.rowconfigure(1, weight=1)
 
-        # Header with database name and back button
+        # Header
         header_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))  # Increased padding
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
         header_frame.columnconfigure(1, weight=1)
 
         self.query_db_label = ttk.Label(
@@ -540,21 +532,18 @@ class DBManagementPage(ttk.Frame):
             command=self.show_normal_view,
             style="Secondary.TButton",
         )
-        back_btn.grid(row=0, column=2, sticky="e", padx=(25, 0))  # Increased padding
+        back_btn.grid(row=0, column=2, sticky="e", padx=(25, 0))
 
-        # Create notebook for tabs
+        # Notebook
         self.query_notebook = ttk.Notebook(self.query_frame)
-        self.query_notebook.grid(row=1, column=0, sticky="nsew", pady=(0, 15))  # Increased padding
+        self.query_notebook.grid(row=1, column=0, sticky="nsew", pady=(0, 15))
 
-        # Create Query Tab
         self.create_query_tab()
-
-        # Create History Tab
         self.create_history_tab()
 
-        # Enhanced status bar
+        # Status bar
         status_frame = ttk.Frame(self.query_frame, style="Query.TFrame")
-        status_frame.grid(row=2, column=0, sticky="ew", pady=(15, 0))  # Increased padding
+        status_frame.grid(row=2, column=0, sticky="ew", pady=(15, 0))
 
         status_bg_frame = ttk.Frame(status_frame)
         status_bg_frame.pack(fill="x")
@@ -563,52 +552,50 @@ class DBManagementPage(ttk.Frame):
         self.status_label = ttk.Label(
             status_bg_frame,
             text="Ready to execute queries...",
-            font=("Segoe UI", 12, "italic"),  # Increased from 10
-            foreground="#7F8C8D",
+            font=("Segoe UI", 12, "italic"),
+            foreground="#939498",  # New gray
             background="#F8F9FA",
         )
-        self.status_label.pack(side="left", padx=15, pady=12)  # Increased padding
+        self.status_label.pack(side="left", padx=15, pady=12)
 
     def create_query_tab(self):
-        """Create the main query tab with improved sizing"""
+        """Create query tab with new color scheme"""
         query_tab = ttk.Frame(self.query_notebook, style="Query.TFrame")
         self.query_notebook.add(query_tab, text="Query")
 
         query_tab.columnconfigure(0, weight=1)
         query_tab.rowconfigure(2, weight=1)
 
-        # SQL Editor Section with better spacing
+        # SQL Editor
         editor_frame = ttk.Frame(query_tab, style="Query.TFrame")
-        editor_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))  # Increased padding
+        editor_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))
         editor_frame.columnconfigure(0, weight=1)
 
         editor_label = ttk.Label(
             editor_frame, text="SQL Query:", style="QuerySubHeader.TLabel"
         )
-        editor_label.grid(row=0, column=0, sticky="w", pady=(0, 12))  # Increased padding
+        editor_label.grid(row=0, column=0, sticky="w", pady=(0, 12))
 
-        # SQL text editor with scrollbar and larger font
         editor_container = ttk.Frame(editor_frame, style="Query.TFrame")
         editor_container.grid(row=1, column=0, sticky="ew")
         editor_container.columnconfigure(0, weight=1)
 
         self.sql_text = tk.Text(
             editor_container,
-            height=10,  # Increased from 8
-            font=("Consolas", 13),  # Increased from 11
+            height=10,
+            font=("Consolas", 13),
             bg="white",
-            fg="#2C3E50",
-            insertbackground="#2C3E50",
-            selectbackground="#3498DB",
+            fg="#181F67",  # New dark blue
+            insertbackground="#181F67",  # New dark blue
+            selectbackground="#7BB837",  # New green
             selectforeground="white",
             wrap="none",
             relief="solid",
             borderwidth=1,
-            padx=8,  # Added internal padding
+            padx=8,
             pady=6
         )
 
-        # Add scrollbars for SQL editor
         sql_scrollbar_v = ttk.Scrollbar(
             editor_container, orient="vertical", command=self.sql_text.yview
         )
@@ -625,9 +612,9 @@ class DBManagementPage(ttk.Frame):
 
         editor_container.grid_rowconfigure(0, weight=1)
 
-        # Enhanced button frame with better spacing
+        # Buttons
         button_frame = ttk.Frame(query_tab, style="Query.TFrame")
-        button_frame.grid(row=1, column=0, sticky="ew", pady=(20, 20))  # Increased padding
+        button_frame.grid(row=1, column=0, sticky="ew", pady=(20, 20))
 
         execute_btn = ttk.Button(
             button_frame,
@@ -635,7 +622,7 @@ class DBManagementPage(ttk.Frame):
             command=self.execute_query,
             style="Success.TButton",
         )
-        execute_btn.pack(side="left", padx=(0, 20))  # Increased spacing
+        execute_btn.pack(side="left", padx=(0, 20))
 
         format_btn = ttk.Button(
             button_frame,
@@ -643,7 +630,7 @@ class DBManagementPage(ttk.Frame):
             command=self.format_sql,
             style="Accent.TButton",
         )
-        format_btn.pack(side="left", padx=(0, 20))  # Increased spacing
+        format_btn.pack(side="left", padx=(0, 20))
 
         clear_btn = ttk.Button(
             button_frame,
@@ -653,18 +640,17 @@ class DBManagementPage(ttk.Frame):
         )
         clear_btn.pack(side="left")
 
-        # Results section with improved sizing
+        # Results
         results_frame = ttk.Frame(query_tab, style="Query.TFrame")
-        results_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 15))  # Increased padding
+        results_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 15))
         results_frame.columnconfigure(0, weight=1)
         results_frame.rowconfigure(1, weight=1)
 
         results_label = ttk.Label(
             results_frame, text="Query Results:", style="QuerySubHeader.TLabel"
         )
-        results_label.grid(row=0, column=0, sticky="w", pady=(0, 12))  # Increased padding
+        results_label.grid(row=0, column=0, sticky="w", pady=(0, 12))
 
-        # Results treeview with scrollbars
         results_container = ttk.Frame(results_frame, style="Query.TFrame")
         results_container.grid(row=1, column=0, sticky="nsew")
         results_container.columnconfigure(0, weight=1)
@@ -672,7 +658,6 @@ class DBManagementPage(ttk.Frame):
 
         self.results_tree = ttk.Treeview(results_container, style="Custom.Treeview")
 
-        # Add scrollbars for results
         results_scrollbar_v = ttk.Scrollbar(
             results_container, orient="vertical", command=self.results_tree.yview
         )
@@ -689,16 +674,16 @@ class DBManagementPage(ttk.Frame):
         results_scrollbar_h.grid(row=1, column=0, sticky="ew")
 
     def create_history_tab(self):
-        """Create the query history tab with improved styling"""
+        """Create history tab with new color scheme"""
         history_tab = ttk.Frame(self.query_notebook, style="Query.TFrame")
         self.query_notebook.add(history_tab, text="History")
 
         history_tab.columnconfigure(0, weight=1)
         history_tab.rowconfigure(1, weight=1)
 
-        # History header and controls with better spacing
+        # Header
         history_header_frame = ttk.Frame(history_tab, style="Query.TFrame")
-        history_header_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))  # Increased padding
+        history_header_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))
         history_header_frame.columnconfigure(1, weight=1)
 
         history_label = ttk.Label(
@@ -706,16 +691,15 @@ class DBManagementPage(ttk.Frame):
         )
         history_label.grid(row=0, column=0, sticky="w")
 
-        # Clear history button
         clear_history_btn = ttk.Button(
             history_header_frame,
             text="Clear History",
             command=self.clear_query_history,
             style="Danger.TButton",
         )
-        clear_history_btn.grid(row=0, column=2, sticky="e", padx=(15, 0))  # Increased padding
+        clear_history_btn.grid(row=0, column=2, sticky="e", padx=(15, 0))
 
-        # History treeview with scrollbars and improved column widths
+        # History treeview
         history_container = ttk.Frame(history_tab, style="Query.TFrame")
         history_container.grid(row=1, column=0, sticky="nsew")
         history_container.columnconfigure(0, weight=1)
@@ -728,18 +712,16 @@ class DBManagementPage(ttk.Frame):
             style="History.Treeview",
         )
 
-        # Configure columns with better widths
         self.history_tree.heading("timestamp", text="Time")
         self.history_tree.heading("preview", text="Query Preview")
         self.history_tree.heading("status", text="Status")
         self.history_tree.heading("rows", text="Rows")
 
-        self.history_tree.column("timestamp", width=140, minwidth=140)  # Increased
-        self.history_tree.column("preview", width=500, minwidth=250)  # Increased
-        self.history_tree.column("status", width=100, minwidth=100)  # Increased
-        self.history_tree.column("rows", width=80, minwidth=80)  # Increased
+        self.history_tree.column("timestamp", width=140, minwidth=140)
+        self.history_tree.column("preview", width=500, minwidth=250)
+        self.history_tree.column("status", width=100, minwidth=100)
+        self.history_tree.column("rows", width=80, minwidth=80)
 
-        # Add scrollbars for history
         history_scrollbar_v = ttk.Scrollbar(
             history_container, orient="vertical", command=self.history_tree.yview
         )
@@ -755,18 +737,17 @@ class DBManagementPage(ttk.Frame):
         history_scrollbar_v.grid(row=0, column=1, sticky="ns")
         history_scrollbar_h.grid(row=1, column=0, sticky="ew")
 
-        # Bind events for history interaction
         self.history_tree.bind("<Double-1>", self.load_query_from_history)
         self.history_tree.bind("<Button-3>", self.show_history_context_menu)
 
-        # Create history context menu with larger font
+        # History context menu with new color scheme
         self.history_context_menu = tk.Menu(
             self,
             tearoff=0,
-            font=("Segoe UI", 12),  # Increased from 10
+            font=("Segoe UI", 12),
             bg="#FFFFFF",
-            fg="#2C3E50",
-            activebackground="#3498DB",
+            fg="#181F67",  # New dark blue
+            activebackground="#7BB837",  # New green
             activeforeground="white",
             borderwidth=1,
             relief="solid",
