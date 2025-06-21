@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
+import os
 from db import create_database, restore_database, terminate_and_delete_database
 from gui.snake_game import SnakeGame
 
@@ -57,18 +58,19 @@ class RestorePage(ttk.Frame):
 
         # Snake game with better sizing
         self.snake_game = SnakeGame(content_frame, width=400, height=280)
-        self.snake_game.grid(row=7, column=0, columnspan=3, pady=25)
+        self.snake_game.grid(row=8, column=0, columnspan=3, pady=25)  # Updated row number
         self.snake_game.grid_remove()
 
-        # Navigation button with new color scheme
+        # Navigation button with secondary styling
         style.configure(
             "NavSecondary.TButton",
-            background="#939498",  # New gray
+            background="#939498",  # Gray for secondary navigation
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(20, 12),
             borderwidth=0,
-            relief="flat"
+            relief="flat",
+            focuscolor="none"
         )
         style.map("NavSecondary.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
 
@@ -78,9 +80,32 @@ class RestorePage(ttk.Frame):
             command=lambda: self.controller.show_frame("DBManagementPage"),
             style="NavSecondary.TButton",
         )
-        back_btn.grid(row=8, column=0, columnspan=3, pady=20)
+        back_btn.grid(row=9, column=0, columnspan=3, pady=20)  # Updated row number
+
+        # Auto-detect PostgreSQL installation
+        self.auto_detect_postgresql()
 
         self._widgets_created = True
+
+    def auto_detect_postgresql(self):
+        """Automatically detect the best PostgreSQL installation"""
+        common_paths = [
+            r"C:\Program Files\PostgreSQL\17\bin",
+            r"C:\Program Files\PostgreSQL\16\bin", 
+            r"C:\Program Files\PostgreSQL\15\bin",
+            r"C:\Program Files\PostgreSQL\14\bin",
+            r"C:\Program Files\PostgreSQL\13\bin",
+            r"C:\Program Files\PostgreSQL\12\bin",
+        ]
+        
+        for path in common_paths:
+            pg_restore_path = os.path.join(path, "pg_restore.exe")
+            if os.path.exists(pg_restore_path):
+                self.pg_restore_path_var.set(path)
+                return
+        
+        # If no installation found, keep the default but show a warning
+        print("Warning: No PostgreSQL installation detected. Using default path.")
 
     def create_form_fields(self, parent):
         """Create form input fields with new color scheme"""
@@ -118,18 +143,19 @@ class RestorePage(ttk.Frame):
         )
         self.backup_file_entry.grid(row=2, column=1, padx=8, pady=15, sticky="ew")
 
-        # Browse button with new color scheme
+        # Browse button with consistent styling
         style = ttk.Style()
         style.configure(
             "Browse.TButton",
             font=("Segoe UI", 12, "bold"),
             padding=(18, 10),
-            background="#939498",  # New gray
+            background="#7BB837",  # Green to match theme
             foreground="white",
             borderwidth=0,
-            relief="flat"
+            relief="flat",
+            focuscolor="none"
         )
-        style.map("Browse.TButton", background=[("active", "#7A7A7E")])  # Darker gray on hover
+        style.map("Browse.TButton", background=[("active", "#6FA02E")])  # Darker green on hover
         
         browse_btn = ttk.Button(
             parent, 
@@ -139,7 +165,7 @@ class RestorePage(ttk.Frame):
         )
         browse_btn.grid(row=2, column=2, padx=(20, 0), pady=15)
 
-        # PostgreSQL binary path with new color scheme
+        # PostgreSQL binary path with improved default and help text
         ttk.Label(
             parent, 
             text="PostgreSQL Bin Path:", 
@@ -147,8 +173,9 @@ class RestorePage(ttk.Frame):
             foreground="#181F67"  # New dark blue
         ).grid(row=3, column=0, sticky="e", padx=(0, 20), pady=15)
 
+        # Updated default path to use a more recent PostgreSQL version
         self.pg_restore_path_var = tk.StringVar(
-            value=r"C:\Program Files\PostgreSQL\12\bin"
+            value=r"C:\Program Files\PostgreSQL\15\bin"  # Updated to version 15
         )
         self.pg_restore_path_entry = ttk.Entry(
             parent,
@@ -158,10 +185,32 @@ class RestorePage(ttk.Frame):
         )
         self.pg_restore_path_entry.grid(row=3, column=1, padx=8, pady=15, sticky="ew")
 
+        # Browse button for PostgreSQL path
+        browse_pg_btn = ttk.Button(
+            parent, 
+            text="Browse...", 
+            command=self.browse_postgresql_path,
+            style="Browse.TButton"
+        )
+        browse_pg_btn.grid(row=3, column=2, padx=(20, 0), pady=15)
+
+        # Add help text for PostgreSQL path
+        help_label = ttk.Label(
+            parent,
+            text="Note: Use PostgreSQL 15+ for modern backup files. Common paths:\n"
+                 "• C:\\Program Files\\PostgreSQL\\15\\bin\n"
+                 "• C:\\Program Files\\PostgreSQL\\16\\bin\n"
+                 "• C:\\Program Files\\PostgreSQL\\17\\bin",
+            font=("Segoe UI", 10),
+            foreground="#939498",
+            justify="left"
+        )
+        help_label.grid(row=4, column=0, columnspan=3, pady=(5, 0), sticky="w")
+
     def create_action_buttons(self, parent):
         """Create action buttons with new color scheme"""
         button_frame = ttk.Frame(parent)
-        button_frame.grid(row=4, column=0, columnspan=3, pady=35)
+        button_frame.grid(row=5, column=0, columnspan=3, pady=35)  # Updated row number
 
         # Configure enhanced button styles with new colors
         style = ttk.Style()
@@ -179,7 +228,7 @@ class RestorePage(ttk.Frame):
 
         style.configure(
             "RestoreSecondary.TButton",
-            background="#939498",  # New gray
+            background="#939498",  # Gray for secondary actions
             foreground="white",
             font=("Segoe UI", 12, "bold"),
             padding=(25, 12),
@@ -208,7 +257,7 @@ class RestorePage(ttk.Frame):
     def create_progress_section(self, parent):
         """Create progress display section with new color scheme"""
         self.progress_frame = ttk.Frame(parent)
-        self.progress_frame.grid(row=5, column=0, columnspan=3, pady=25, sticky="ew")
+        self.progress_frame.grid(row=6, column=0, columnspan=3, pady=25, sticky="ew")  # Updated row number
 
         # Progress label with new color scheme
         self.progress_label = ttk.Label(
@@ -267,6 +316,29 @@ class RestorePage(ttk.Frame):
 
         if file_path:
             self.backup_file_var.set(file_path)
+
+    def browse_postgresql_path(self):
+        """Browse for PostgreSQL bin directory"""
+        initial_dir = self.pg_restore_path_var.get()
+        if not os.path.exists(initial_dir):
+            initial_dir = r"C:\Program Files\PostgreSQL"
+
+        directory = filedialog.askdirectory(
+            title="Select PostgreSQL bin Directory",
+            initialdir=initial_dir
+        )
+
+        if directory:
+            # Validate that this directory contains pg_restore.exe
+            pg_restore_path = os.path.join(directory, "pg_restore.exe")
+            if os.path.exists(pg_restore_path):
+                self.pg_restore_path_var.set(directory)
+            else:
+                messagebox.showwarning(
+                    "Invalid Directory",
+                    f"The selected directory does not contain pg_restore.exe.\n\n"
+                    f"Please select a PostgreSQL bin directory (e.g., C:\\Program Files\\PostgreSQL\\15\\bin)"
+                )
 
     def clear_form(self):
         """Clear all form fields"""
