@@ -1193,6 +1193,9 @@ class DBManagementPage(ttk.Frame):
             self.db_context_menu.add_command(
                 label="Query Database", command=self.open_query_interface
             )
+            self.db_context_menu.add_command(
+                label="Backup Database", command=self.backup_database
+            )
             self.db_context_menu.add_separator()
             if not self.is_protected_database(self.context_menu_dbs[0]):
                 self.db_context_menu.add_command(
@@ -1206,6 +1209,9 @@ class DBManagementPage(ttk.Frame):
         else:
             self.db_context_menu.add_command(
                 label="Clone Database", command=self.clone_database
+            )
+            self.db_context_menu.add_command(
+                label="Backup Databases", command=self.backup_database
             )
             self.db_context_menu.add_separator()
             if deletable_dbs:
@@ -1623,6 +1629,15 @@ class DBManagementPage(ttk.Frame):
         db_name = self.context_menu_dbs[0]
         self.show_query_view(db_name)
 
+    def backup_database(self):
+        """Backup selected database(s) - placeholder for future implementation"""
+        selected_count = len(self.context_menu_dbs)
+        if selected_count == 1:
+            messagebox.showinfo("Backup", f"Backup functionality for '{self.context_menu_dbs[0]}' will be implemented soon!")
+        else:
+            messagebox.showinfo("Backup", f"Backup functionality for {selected_count} databases will be implemented soon!")
+
+
     def delete_database_from_context(self):
         """Delete selected databases from context menu with improved dialog styling"""
         all_selected_dbs = self.context_menu_dbs
@@ -1896,7 +1911,7 @@ class DBManagementPage(ttk.Frame):
                 )
 
         threading.Thread(target=query_worker, daemon=True).start()
-
+    
     def display_query_results(self, result, original_query):
         """Display query results in the treeview and add to history."""
         self.results_tree.delete(*self.results_tree.get_children())
