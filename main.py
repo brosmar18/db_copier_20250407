@@ -9,7 +9,7 @@ from gui.restore_page import RestorePage
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("DB Manager")
+        self.title("AppDev Station")
         self.geometry("1400x900")  # Larger default size for better visibility
         self.minsize(1000, 700)  # Increased minimum size
 
