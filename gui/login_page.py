@@ -17,7 +17,7 @@ class LoginPage(ttk.Frame):
         # Page Title with larger font and new color
         label_title = ttk.Label(
             content_frame, 
-            text="Postgres Login", 
+            text="Login", 
             font=("Segoe UI", 24, "bold"),
             foreground="#181F67"  # New dark blue
         )
