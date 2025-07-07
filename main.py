@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from gui.login_page import LoginPage
-from gui.copier_page import CopierPage
 from gui.db_management_page import DBManagementPage
 from gui.restore_page import RestorePage
 
@@ -141,7 +140,6 @@ class App(tk.Tk):
         # Map page names to classes
         page_classes = {
             "LoginPage": LoginPage,
-            "CopierPage": CopierPage,
             "DBManagementPage": DBManagementPage,
             "RestorePage": RestorePage,
         }
@@ -168,7 +166,7 @@ class App(tk.Tk):
         self.db_credentials = {}
 
         # Clear any cached frames except login for memory efficiency
-        frames_to_clear = ["DBManagementPage", "CopierPage", "RestorePage"]
+        frames_to_clear = ["DBManagementPage", "RestorePage"]
         for frame_name in frames_to_clear:
             if frame_name in self.frames:
                 self.frames[frame_name].destroy()
