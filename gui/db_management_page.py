@@ -1264,7 +1264,7 @@ class DBManagementPage(ttk.Frame):
 
 
     def clone_database(self):
-        """Open dialog for naming and quantity of cloned DBs with improved styling"""
+        """Open dialog for naming and quantity of cloned DBs with enhanced progress tracking"""
         if not self.context_menu_dbs:
             return
 
@@ -1292,7 +1292,7 @@ class DBManagementPage(ttk.Frame):
         self.clone_in_progress = False
 
         # Main content frame with enhanced styling and larger size
-        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=50)  # Increased padding
+        content_frame = ttk.Frame(dialog, style="Dialog.TFrame", padding=50)
         content_frame.pack(fill="both", expand=True)
         content_frame.columnconfigure(1, weight=1)
 
@@ -1301,61 +1301,135 @@ class DBManagementPage(ttk.Frame):
             content_frame,
             text="Clone Database",
             style="DialogHeader.TLabel",
-            font=("Segoe UI", 20, "bold"),  # Increased from 16
+            font=("Segoe UI", 20, "bold"),
         )
-        header_label.grid(row=0, column=0, columnspan=2, pady=(0, 40))  # Increased padding
+        header_label.grid(row=0, column=0, columnspan=2, pady=(0, 40))
 
         # Layout with styled widgets and improved sizing
         ttk.Label(
             content_frame, 
             text="New Database Name:", 
             style="Dialog.TLabel",
-            font=("Segoe UI", 14)  # Increased font
-        ).grid(row=1, column=0, padx=(0, 25), pady=(0, 20), sticky="w")  # Increased padding
+            font=("Segoe UI", 14)
+        ).grid(row=1, column=0, padx=(0, 25), pady=(0, 20), sticky="w")
 
         name_entry = ttk.Entry(
             content_frame, 
             textvariable=name_var, 
-            width=40,  # Increased width
-            font=("Segoe UI", 13)  # Larger font
+            width=40,
+            font=("Segoe UI", 13)
         )
-        name_entry.grid(row=1, column=1, pady=(0, 20), sticky="ew")  # Increased padding
+        name_entry.grid(row=1, column=1, pady=(0, 20), sticky="ew")
 
         ttk.Label(
             content_frame, 
             text="Number of Copies:", 
             style="Dialog.TLabel",
-            font=("Segoe UI", 14)  # Increased font
-        ).grid(row=2, column=0, padx=(0, 25), pady=(0, 30), sticky="w")  # Increased padding
+            font=("Segoe UI", 14)
+        ).grid(row=2, column=0, padx=(0, 25), pady=(0, 30), sticky="w")
 
         copies_spin = ttk.Spinbox(
             content_frame,
             from_=1,
             to=100,
             textvariable=copies_var,
-            width=15,  # Increased width
-            font=("Segoe UI", 13)  # Larger font
+            width=15,
+            font=("Segoe UI", 13)
         )
-        copies_spin.grid(row=2, column=1, pady=(0, 30), sticky="w")  # Increased padding
+        copies_spin.grid(row=2, column=1, pady=(0, 30), sticky="w")
 
-        # Progress bar (initially hidden) with better styling
-        progress_bar = ttk.Progressbar(content_frame, mode="indeterminate")
-        progress_bar.grid(row=4, column=0, columnspan=2, padx=25, pady=20, sticky="ew")  # Increased padding
+        # Progress bar with determinate mode for accurate progress
+        progress_bar = ttk.Progressbar(
+            content_frame, 
+            mode="determinate",
+            maximum=100,
+            style="Copy.Horizontal.TProgressbar"
+        )
+        progress_bar.grid(row=4, column=0, columnspan=2, padx=25, pady=(20, 10), sticky="ew")
         progress_bar.grid_remove()
 
-        # Status label (initially hidden) with larger font
+        # Main status label with larger font and better wrapping
         status_label = ttk.Label(
             content_frame, 
             text="", 
             style="Dialog.TLabel",
-            font=("Segoe UI", 12)  # Larger font
+            font=("Segoe UI", 12, "bold"),
+            wraplength=500  # Allow text wrapping for longer messages
         )
-        status_label.grid(row=5, column=0, columnspan=2, padx=25, pady=15, sticky="w")  # Increased padding
+        status_label.grid(row=5, column=0, columnspan=2, padx=25, pady=(5, 10), sticky="w")
         status_label.grid_remove()
 
-        # Button handlers
-        def update_status(message):
-            dialog.after(0, lambda: status_label.config(text=message))
+        # Progress details label (shows current database being processed)
+        progress_detail_label = ttk.Label(
+            content_frame,
+            text="",
+            style="Dialog.TLabel", 
+            font=("Segoe UI", 11),
+            wraplength=500
+        )
+        progress_detail_label.grid(row=6, column=0, columnspan=2, padx=25, pady=(5, 10), sticky="w")
+        progress_detail_label.grid_remove()
+
+        # Log frame for detailed progress (scrollable)
+        log_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
+        log_frame.grid(row=7, column=0, columnspan=2, padx=25, pady=(10, 20), sticky="ew")
+        log_frame.grid_remove()
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.rowconfigure(0, weight=1)
+
+        # Create scrollable text widget for detailed logs
+        log_text = tk.Text(
+            log_frame,
+            height=8,
+            width=60,
+            font=("Consolas", 10),
+            bg="#F8F9FA",
+            fg="#181F67",
+            wrap="word",
+            state="disabled",
+            relief="solid",
+            borderwidth=1
+        )
+        log_text.grid(row=0, column=0, sticky="nsew")
+
+        log_scrollbar = ttk.Scrollbar(log_frame, orient="vertical", command=log_text.yview)
+        log_text.configure(yscrollcommand=log_scrollbar.set)
+        log_scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Button handlers with enhanced progress tracking
+        def update_callback(message=None, progress=None, current_db=None, db_index=None, total_dbs=None):
+            """Enhanced callback that handles both message and progress updates"""
+            def update_ui():
+                if message is not None:
+                    # Update main status label
+                    status_label.config(text=message)
+                    
+                    # Add to detailed log
+                    log_text.config(state="normal")
+                    timestamp = time.strftime("%H:%M:%S")
+                    log_text.insert(tk.END, f"[{timestamp}] {message}\n")
+                    log_text.see(tk.END)  # Auto-scroll to bottom
+                    log_text.config(state="disabled")
+                
+                if progress is not None:
+                    # For multiple databases, calculate overall progress
+                    if total_dbs and total_dbs > 1 and db_index is not None:
+                        # Each database gets equal portion of total progress
+                        db_portion = 100 / total_dbs
+                        overall_progress = (db_index * db_portion) + (progress * db_portion / 100)
+                        progress_bar["value"] = overall_progress
+                        
+                        # Update detail label to show which database is being processed
+                        if current_db:
+                            progress_detail_label.config(
+                                text=f"📊 Overall Progress: Database {db_index + 1} of {total_dbs} ({current_db}) - {progress:.1f}%"
+                            )
+                    else:
+                        # Single database - direct progress
+                        progress_bar["value"] = progress
+                        progress_detail_label.config(text=f"📊 Progress: {progress:.1f}% complete")
+                        
+            dialog.after(0, update_ui)
 
         def perform_clone():
             new_name = name_var.get().strip() or default_name
@@ -1369,9 +1443,23 @@ class DBManagementPage(ttk.Frame):
                     else:
                         current_name = f"{new_name}_{i+1:02d}"
 
-                    update_status(f"Cloning {source_db} to {current_name}...")
+                    # Create a wrapper callback for this specific database
+                    def db_callback(message=None, progress=None):
+                        update_callback(
+                            message=message, 
+                            progress=progress,
+                            current_db=current_name,
+                            db_index=i,
+                            total_dbs=count
+                        )
+
+                    # Update overall progress for multiple databases
+                    if count > 1:
+                        overall_message = f"🚀 Starting clone {i+1} of {count}: {current_name}"
+                        db_callback(overall_message, 0)
+
                     copy_database_logic(
-                        credentials, source_db, current_name, update_status
+                        credentials, source_db, current_name, db_callback
                     )
 
                 dialog.after(
@@ -1398,10 +1486,20 @@ class DBManagementPage(ttk.Frame):
             name_entry.config(state="disabled")
             copies_spin.config(state="disabled")
 
+            # Show progress elements
             progress_bar.grid()
-            progress_bar.start(10)
+            progress_bar["value"] = 0
             status_label.grid()
-            status_label.config(text="Starting clone operation...")
+            progress_detail_label.grid()
+            log_frame.grid()  # Show the detailed log
+            
+            # Clear any existing log content
+            log_text.config(state="normal")
+            log_text.delete(1.0, tk.END)
+            log_text.config(state="disabled")
+            
+            status_label.config(text="🚀 Initializing clone operation...")
+            progress_detail_label.config(text="📊 Preparing to start...")
 
             clone_thread = threading.Thread(target=perform_clone, daemon=True)
             clone_thread.start()
@@ -1412,28 +1510,29 @@ class DBManagementPage(ttk.Frame):
 
         # Enhanced buttons with better sizing
         btn_frame = ttk.Frame(content_frame, style="Dialog.TFrame")
-        btn_frame.grid(row=3, column=0, columnspan=2, pady=(25, 0))  # Increased padding
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=(25, 0))
 
         ok_btn = ttk.Button(
             btn_frame, text="Clone Database", command=on_ok, style="Success.TButton"
         )
-        ok_btn.pack(side="left", padx=25)  # Increased spacing
+        ok_btn.pack(side="left", padx=25)
 
         cancel_btn = ttk.Button(
             btn_frame, text="Cancel", command=on_cancel, style="Secondary.TButton"
         )
-        cancel_btn.pack(side="right", padx=25)  # Increased spacing
+        cancel_btn.pack(side="right", padx=25)
 
-        # Set size and center the dialog with better dimensions
+        # Set size and center the dialog with better dimensions for log display
         dialog.withdraw()
         dialog.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (600 // 2)  # Increased width
-        y = self.winfo_rooty() + (self.winfo_height() // 2) - (450 // 2)  # Increased height
-        dialog.geometry(f"600x450+{x}+{y}")  # Larger dialog
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (650 // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (600 // 2)
+        dialog.geometry(f"650x600+{x}+{y}")  # Larger dialog for detailed logs
         dialog.deiconify()
 
         name_entry.focus()
         dialog.wait_window()
+
 
     def rename_database(self):
         """Open dialog for renaming a database with improved styling"""

@@ -222,14 +222,42 @@ class CopierPage(ttk.Frame):
         self.copy_thread.start()
 
     def perform_copy(self, src_db, new_db):
-        """Perform the copy operation in background"""
+        """Perform the copy operation in background with accurate progress tracking"""
         credentials = self.controller.db_credentials
 
+        def update_callback(message=None, progress=None):
+            """Handle both status and progress updates"""
+            if message is not None:
+                self.update_status(message)
+            if progress is not None:
+                # Update progress bar to determinate mode and set value
+                def update_progress():
+                    self.progress_bar.stop()  # Stop any animation
+                    self.progress_bar.config(mode="determinate", maximum=100)
+                    self.progress_bar["value"] = progress
+                self.after(0, update_progress)
+
         try:
-            copy_database_logic(credentials, src_db, new_db, self.update_status)
+            copy_database_logic(credentials, src_db, new_db, update_callback)
             self.after(0, lambda: self.copy_success(src_db, new_db))
         except Exception as e:
             self.after(0, lambda: self.copy_error(str(e)))
+
+    def show_progress(self, message):
+        """Show progress bar and status with determinate mode"""
+        self.progress_frame.grid()
+        # Configure for determinate progress tracking
+        self.progress_bar.config(mode="determinate", maximum=100)
+        self.progress_bar["value"] = 0
+        self.status_label.config(text=message)
+
+    def hide_progress(self):
+        """Hide progress bar"""
+        self.progress_bar.stop()  # Stop any animation
+        self.progress_bar["value"] = 0  # Reset value
+        self.progress_frame.grid_remove()
+
+
 
     def copy_success(self, src_db, new_db):
         """Handle successful copy"""
