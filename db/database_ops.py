@@ -437,40 +437,25 @@ def execute_sql_query(credentials, db_name, sql_query):
             (time.time() - start_time) * 1000, 2
         )  # Convert to milliseconds
 
-        # Determine query type and handle results accordingly
-        query_type = sql_query.strip().upper().split()[0] if sql_query.strip() else ""
+        # Use cur.description to determine if the query returned a result set.
+        # This is reliable regardless of comments, CTEs, or query structure.
+        if cur.description is not None:
+            # Query returned rows (SELECT, SHOW, EXPLAIN, RETURNING, etc.)
+            rows = cur.fetchall()
+            columns = [desc[0] for desc in cur.description]
+            row_count = len(rows)
 
-        if query_type in ["SELECT", "WITH", "SHOW", "EXPLAIN", "ANALYZE"]:
-            # Fetch results for SELECT-type queries
-            try:
-                rows = cur.fetchall()
-                columns = (
-                    [desc[0] for desc in cur.description] if cur.description else []
-                )
-                row_count = len(rows)
-
-                result = {
-                    "success": True,
-                    "query_type": "SELECT",
-                    "columns": columns,
-                    "rows": rows,
-                    "row_count": row_count,
-                    "execution_time_ms": execution_time,
-                    "message": f"Query executed successfully. {row_count} rows returned.",
-                }
-            except Exception:
-                # Handle cases where query doesn't return results
-                result = {
-                    "success": True,
-                    "query_type": "SELECT",
-                    "columns": [],
-                    "rows": [],
-                    "row_count": 0,
-                    "execution_time_ms": execution_time,
-                    "message": "Query executed successfully. No results returned.",
-                }
+            result = {
+                "success": True,
+                "query_type": "SELECT",
+                "columns": columns,
+                "rows": rows,
+                "row_count": row_count,
+                "execution_time_ms": execution_time,
+                "message": f"Query executed successfully. {row_count} rows returned.",
+            }
         else:
-            # Handle modification queries (INSERT, UPDATE, DELETE, etc.)
+            # Non-returning statement (INSERT, UPDATE, DELETE, DDL, etc.)
             try:
                 affected_rows = cur.rowcount
                 conn.commit()
