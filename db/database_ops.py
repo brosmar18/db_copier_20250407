@@ -460,6 +460,13 @@ def execute_sql_query(credentials, db_name, sql_query):
                 affected_rows = cur.rowcount
                 conn.commit()
 
+                # cur.rowcount is -1 for commands that don't report row
+                # counts (DO blocks, CREATE, DROP, TRUNCATE, etc.)
+                if affected_rows >= 0:
+                    rows_message = f"Query executed successfully. {affected_rows} rows affected."
+                else:
+                    rows_message = "Query executed successfully."
+
                 result = {
                     "success": True,
                     "query_type": "MODIFICATION",
@@ -467,7 +474,7 @@ def execute_sql_query(credentials, db_name, sql_query):
                     "rows": [],
                     "row_count": affected_rows if affected_rows >= 0 else 0,
                     "execution_time_ms": execution_time,
-                    "message": f"Query executed successfully. {affected_rows if affected_rows >= 0 else 0} rows affected.",
+                    "message": rows_message,
                 }
             except Exception:
                 conn.rollback()
