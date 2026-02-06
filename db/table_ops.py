@@ -67,9 +67,10 @@ def get_table_details(credentials, db_name, table_name):
         cur.execute(query, (table_name,))
         row = cur.fetchone()
         if row:
+            estimated_rows = row[1]
             details = {
                 "Table Name": row[0],
-                "Record Count": row[1]
+                "Record Count": max(estimated_rows, 0)
             }
             return details
         else:
